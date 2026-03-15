@@ -185,9 +185,9 @@ const WaterGlobe: React.FC = () => {
       className="relative w-80 h-80 md:w-[26rem] md:h-[26rem]"
       onPointerMove={handlePointerMove}
       onPointerLeave={() => { mouseTarget.current = { x: 0.5, y: 0.5 }; }}
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1, y: [0, -8, 0] }}
-      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      initial={{ scale: 0.98, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.8, ease: 'easeOut' }}
     >
       <canvas
         ref={canvasRef}
