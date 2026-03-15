@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #0f172a;
-  --color-primary: #0ea5e9;
+  --color-background: #f5f7fb;
+  --color-foreground: #0b1220;
+  --color-primary: #1a7fdb;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f1f5f9;
-  --color-secondary-foreground: #475569;
-  --color-muted: #f8fafc;
-  --color-muted-foreground: #64748b;
-  --color-accent: #f0f9ff;
-  --color-accent-foreground: #0369a1;
+  --color-secondary: #eef2f7;
+  --color-secondary-foreground: #334155;
+  --color-muted: #f3f6fb;
+  --color-muted-foreground: #5b6b83;
+  --color-accent: #eaf4ff;
+  --color-accent-foreground: #1d4ed8;
   --color-destructive: #ef4444;
-  --color-border: #e2e8f0;
-  --color-ring: #0ea5e9;
+  --color-border: #dce3f0;
+  --color-ring: #38bdf8;
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
@@ -32,9 +32,21 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--color-background);
+  background-image:
+    radial-gradient(1200px 800px at 15% 10%, rgba(56, 189, 248, 0.18), transparent 60%),
+    radial-gradient(1200px 800px at 85% 15%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(1000px 800px at 50% 85%, rgba(14, 165, 233, 0.12), transparent 70%);
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 /* Custom scrollbar */
@@ -85,6 +97,21 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.bg-aurora {
+  background-image:
+    radial-gradient(500px 300px at 20% 10%, rgba(125, 211, 252, 0.45), transparent 70%),
+    radial-gradient(600px 380px at 80% 15%, rgba(129, 140, 248, 0.45), transparent 70%),
+    radial-gradient(800px 500px at 50% 80%, rgba(56, 189, 248, 0.25), transparent 70%);
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
 }
 
 /* Animations */

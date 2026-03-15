@@ -86,7 +86,7 @@ const DashboardHome: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-slate-600">Complete your profile to get better recommendations</span>
                 <Link to="/dashboard/profile" className="text-sm text-sky-600 hover:text-sky-700 font-medium">
-                  Complete Profile →
+                  Complete Profile ->
                 </Link>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -259,3 +259,5 @@ const DashboardHome: React.FC = () => {
 };
 
 export default DashboardHome;
+
+

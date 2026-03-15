@@ -48,11 +48,12 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute inset-0 bg-aurora" />
+        <div className="absolute inset-0 bg-grid opacity-40" />
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-sky-200/30 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-sky-100/20 to-blue-100/20 rounded-full blur-3xl" />
+          <div className="absolute top-16 left-8 w-72 h-72 bg-sky-200/35 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-[520px] h-[520px] bg-indigo-200/30 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[920px] h-[920px] bg-gradient-to-r from-sky-100/20 to-blue-100/20 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6 pt-32 pb-20">
@@ -62,7 +63,7 @@ const Home: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-100 text-sky-700 text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 text-sky-700 text-sm font-medium mb-6 border border-white/60 shadow-sm">
                 <Star className="w-4 h-4 fill-current" />
                 Trusted by 10,000+ Students Worldwide
               </div>
@@ -79,14 +80,14 @@ const Home: React.FC = () => {
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/signup"
-                  className="group inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all font-medium"
+                  className="group inline-flex items-center gap-2 px-8 py-4 rounded-full text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all font-medium"
                 >
                   Start Your Journey
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link
                   to="/universities"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-slate-700 bg-white/80 backdrop-blur border border-slate-200 hover:bg-white hover:border-slate-300 transition-all font-medium"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-slate-700 bg-white/80 backdrop-blur border border-slate-200 hover:bg-white hover:border-slate-300 transition-all font-medium"
                 >
                   Explore Universities
                 </Link>
@@ -106,7 +107,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-16 -mt-20">
+      <section className="relative py-16 -mt-24">
         <div className="max-w-5xl mx-auto px-6">
           <GlassCard className="p-8" hover={false}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -131,7 +132,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Services Section */}
-      <section className="py-24 bg-gradient-to-b from-white to-sky-50/50">
+      <section className="py-24 bg-gradient-to-b from-white/60 to-sky-50/60">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             className="text-center mb-16"
@@ -229,7 +230,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Featured Universities */}
-      <section className="py-24 bg-gradient-to-b from-sky-50/50 to-white">
+      <section className="py-24 bg-gradient-to-b from-sky-50/60 to-white/80">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4"
@@ -286,7 +287,7 @@ const Home: React.FC = () => {
                     <p className="text-slate-600 text-sm line-clamp-2 mb-4">{uni.description}</p>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">{uni.programs?.length || 0} Programs</span>
-                      <span className="text-sky-600 font-medium">Learn More →</span>
+                      <span className="text-sky-600 font-medium">Learn More -></span>
                     </div>
                   </GlassCard>
                 </Link>
@@ -316,14 +317,14 @@ const Home: React.FC = () => {
                 <div className="flex flex-wrap justify-center gap-4">
                   <Link
                     to="/signup"
-                    className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all font-medium"
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-xl shadow-sky-500/25 hover:shadow-sky-500/40 transition-all font-medium"
                   >
                     Create Free Account
                     <ArrowRight className="w-5 h-5" />
                   </Link>
                   <Link
                     to="/contact"
-                    className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-slate-700 bg-white/80 backdrop-blur border border-slate-200 hover:bg-white hover:border-slate-300 transition-all font-medium"
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-slate-700 bg-white/80 backdrop-blur border border-slate-200 hover:bg-white hover:border-slate-300 transition-all font-medium"
                   >
                     Talk to Counselor
                   </Link>
@@ -338,3 +339,6 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
+
+

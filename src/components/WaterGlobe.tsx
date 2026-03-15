@@ -1,11 +1,12 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 const WaterGlobe: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const animationRef = useRef<number | null>(null);
   const timeRef = useRef(0);
+  const mouseTarget = useRef({ x: 0.5, y: 0.5 });
+  const mouseCurrent = useRef({ x: 0.5, y: 0.5 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -14,98 +15,150 @@ const WaterGlobe: React.FC = () => {
     if (!ctx) return;
 
     const resize = () => {
-      canvas.width = canvas.offsetWidth * 2;
-      canvas.height = canvas.offsetHeight * 2;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(canvas.offsetWidth * dpr);
+      canvas.height = Math.floor(canvas.offsetHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener('resize', resize);
 
+    const continents = [
+      { lat: 30, lon: -20, size: 18 },
+      { lat: 10, lon: 40, size: 20 },
+      { lat: -20, lon: 80, size: 16 },
+      { lat: -10, lon: -120, size: 22 },
+      { lat: 35, lon: 120, size: 14 },
+      { lat: -35, lon: 20, size: 18 },
+      { lat: 5, lon: 150, size: 12 }
+    ];
+
+    const drawLand = (cx: number, cy: number, radius: number, rotation: number) => {
+      continents.forEach((c, index) => {
+        const lat = (c.lat * Math.PI) / 180;
+        const lon = ((c.lon + rotation) * Math.PI) / 180;
+        const x = radius * Math.cos(lat) * Math.sin(lon);
+        const y = -radius * Math.sin(lat);
+        const z = radius * Math.cos(lat) * Math.cos(lon);
+        if (z < 0) return;
+        const depth = z / radius;
+        const size = c.size * (0.6 + depth * 0.6);
+
+        ctx.save();
+        ctx.translate(cx + x, cy + y);
+        ctx.globalAlpha = 0.35 + depth * 0.35;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, size * 1.3, size, (index % 3) * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(120, 190, 140, 0.9)';
+        ctx.fill();
+        ctx.restore();
+      });
+    };
+
     const draw = () => {
       timeRef.current += 0.02;
       const t = timeRef.current;
-      const w = canvas.width;
-      const h = canvas.height;
-      const cx = w / 2;
-      const cy = h / 2;
-      const radius = Math.min(w, h) * 0.4;
+      mouseCurrent.current.x += (mouseTarget.current.x - mouseCurrent.current.x) * 0.08;
+      mouseCurrent.current.y += (mouseTarget.current.y - mouseCurrent.current.y) * 0.08;
+      const wobbleX = (mouseCurrent.current.x - 0.5) * 24;
+      const wobbleY = (mouseCurrent.current.y - 0.5) * 24;
+
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      const cx = w / 2 + wobbleX;
+      const cy = h / 2 + wobbleY + Math.sin(t * 0.8) * 6;
+      const radius = Math.min(w, h) * 0.38;
 
       ctx.clearRect(0, 0, w, h);
 
-      // Draw globe with water effect
-      const gradient = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, 0, cx, cy, radius);
-      gradient.addColorStop(0, 'rgba(100, 200, 255, 0.9)');
-      gradient.addColorStop(0.3, 'rgba(50, 150, 220, 0.8)');
-      gradient.addColorStop(0.6, 'rgba(30, 100, 180, 0.7)');
-      gradient.addColorStop(1, 'rgba(10, 50, 120, 0.6)');
+      const shadowGradient = ctx.createRadialGradient(cx, cy + radius * 0.9, 0, cx, cy + radius * 0.9, radius * 1.2);
+      shadowGradient.addColorStop(0, 'rgba(15, 23, 42, 0.25)');
+      shadowGradient.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + radius * 0.95, radius * 0.85, radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fillStyle = shadowGradient;
+      ctx.fill();
+
+      const oceanGradient = ctx.createRadialGradient(
+        cx - radius * 0.3,
+        cy - radius * 0.4,
+        radius * 0.2,
+        cx,
+        cy,
+        radius
+      );
+      oceanGradient.addColorStop(0, 'rgba(120, 210, 255, 0.98)');
+      oceanGradient.addColorStop(0.4, 'rgba(35, 140, 210, 0.9)');
+      oceanGradient.addColorStop(0.7, 'rgba(20, 90, 160, 0.85)');
+      oceanGradient.addColorStop(1, 'rgba(8, 35, 90, 0.9)');
 
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
+      ctx.fillStyle = oceanGradient;
       ctx.fill();
 
-      // Water ripple effect based on mouse
-      const rippleX = cx + (mousePos.x - 0.5) * radius * 0.5;
-      const rippleY = cy + (mousePos.y - 0.5) * radius * 0.5;
-
-      for (let i = 0; i < 5; i++) {
-        const rippleRadius = (radius * 0.2) + (i * 30) + Math.sin(t * 2 - i * 0.5) * 20;
-        const alpha = 0.3 - i * 0.05;
-        ctx.beginPath();
-        ctx.arc(rippleX, rippleY, rippleRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-
-      // Draw continents (simplified)
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.clip();
 
-      const drawContinent = (x: number, y: number, size: number, rotation: number) => {
-        const offsetX = Math.sin(t * 0.3) * 20;
-        const actualX = cx + x + offsetX;
-        const actualY = cy + y;
-        
-        ctx.save();
-        ctx.translate(actualX, actualY);
-        ctx.rotate(rotation);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, size * 1.5, size, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(100, 180, 100, 0.6)';
-        ctx.fill();
-        ctx.restore();
-      };
+      const rotation = t * 12 + (mouseCurrent.current.x - 0.5) * 30;
+      drawLand(cx, cy, radius * 0.92, rotation);
 
-      // Simplified continents
-      drawContinent(-radius * 0.3, -radius * 0.2, radius * 0.15, 0.3);
-      drawContinent(radius * 0.2, -radius * 0.3, radius * 0.2, -0.2);
-      drawContinent(-radius * 0.1, radius * 0.2, radius * 0.18, 0.5);
-      drawContinent(radius * 0.35, radius * 0.15, radius * 0.12, -0.3);
-      drawContinent(-radius * 0.4, radius * 0.05, radius * 0.1, 0.1);
+      const rippleX = cx + (mouseCurrent.current.x - 0.5) * radius * 0.6;
+      const rippleY = cy + (mouseCurrent.current.y - 0.5) * radius * 0.6;
+      for (let i = 0; i < 4; i += 1) {
+        const rippleRadius = radius * (0.25 + i * 0.14) + Math.sin(t * 2 - i * 0.6) * 8;
+        ctx.beginPath();
+        ctx.arc(rippleX, rippleY, rippleRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.18 - i * 0.03})`;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
 
       ctx.restore();
 
-      // Glossy highlight
-      const highlightGradient = ctx.createRadialGradient(
-        cx - radius * 0.3, cy - radius * 0.3, 0,
-        cx - radius * 0.3, cy - radius * 0.3, radius * 0.6
+      const shadeGradient = ctx.createRadialGradient(
+        cx + radius * 0.4,
+        cy + radius * 0.35,
+        radius * 0.2,
+        cx,
+        cy,
+        radius * 1.1
       );
-      highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-      highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
-      highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      shadeGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      shadeGradient.addColorStop(1, 'rgba(2, 6, 23, 0.35)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = shadeGradient;
+      ctx.fill();
 
+      const highlightGradient = ctx.createRadialGradient(
+        cx - radius * 0.35 + wobbleX * 0.2,
+        cy - radius * 0.4 + wobbleY * 0.2,
+        0,
+        cx - radius * 0.35,
+        cy - radius * 0.4,
+        radius * 0.7
+      );
+      highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      highlightGradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.15)');
+      highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fillStyle = highlightGradient;
       ctx.fill();
 
-      // Outer glow
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(100, 200, 255, 0.5)';
-      ctx.lineWidth = 4;
+      ctx.arc(cx, cy, radius * 1.03, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(120, 220, 255, 0.55)';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.12, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(120, 220, 255, 0.18)';
+      ctx.lineWidth = 6;
       ctx.stroke();
 
       animationRef.current = requestAnimationFrame(draw);
@@ -117,36 +170,39 @@ const WaterGlobe: React.FC = () => {
       window.removeEventListener('resize', resize);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [mousePos]);
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setMousePos({
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height
-    });
+    mouseTarget.current = {
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height))
+    };
   };
 
   return (
     <motion.div
-      className="relative w-80 h-80 md:w-96 md:h-96"
-      onMouseMove={handleMouseMove}
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 1, ease: 'easeOut' }}
+      className="relative w-80 h-80 md:w-[26rem] md:h-[26rem]"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={() => { mouseTarget.current = { x: 0.5, y: 0.5 }; }}
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1, y: [0, -8, 0] }}
+      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
     >
       <canvas
         ref={canvasRef}
         className="w-full h-full cursor-pointer"
-        style={{ filter: 'drop-shadow(0 0 40px rgba(100, 200, 255, 0.5))' }}
+        style={{ filter: 'drop-shadow(0 24px 50px rgba(6, 182, 212, 0.25))' }}
       />
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-white/50 rounded-full animate-pulse" />
-        <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-white/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-white/30 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-white/70 rounded-full animate-pulse" />
+        <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-white/50 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-1/3 left-1/3 w-1 h-1 bg-white/40 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
     </motion.div>
   );
 };
 
 export default WaterGlobe;
+
+
