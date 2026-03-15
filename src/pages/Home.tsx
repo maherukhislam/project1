@@ -287,7 +287,7 @@ const Home: React.FC = () => {
                     <p className="text-slate-600 text-sm line-clamp-2 mb-4">{uni.description}</p>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">{uni.programs?.length || 0} Programs</span>
-                      <span className="text-sky-600 font-medium">Learn More -></span>
+                      <span className="text-sky-600 font-medium">Learn More &gt;</span>
                     </div>
                   </GlassCard>
                 </Link>

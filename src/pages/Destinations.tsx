@@ -200,7 +200,7 @@ const Destinations: React.FC = () => {
                       <div className="p-4">
                         <p className="text-slate-600 text-sm line-clamp-2">{country.description}</p>
                         <div className="mt-4 flex items-center justify-between">
-                          <span className="text-sky-600 font-medium text-sm">Explore -></span>
+                          <span className="text-sky-600 font-medium text-sm">Explore &gt;</span>
                         </div>
                       </div>
                     </GlassCard>
