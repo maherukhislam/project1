@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import supabase from '../lib/supabase';
+import supabase, { supabaseEnabled } from '../lib/supabase';
 import { api } from '../lib/api';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -54,6 +54,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const ensureSupabaseEnabled = () => {
+    if (!supabaseEnabled) {
+      throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    }
+  };
+
   const fetchProfile = async () => {
     try {
       const data = await api.get('/api/profile');
@@ -64,6 +70,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    if (!supabaseEnabled) {
+      setLoading(false);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setUser(session?.user as User | null);
       if (session?.user) fetchProfile();
@@ -83,11 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    ensureSupabaseEnabled();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    ensureSupabaseEnabled();
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -104,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    ensureSupabaseEnabled();
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);

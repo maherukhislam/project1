@@ -88,7 +88,7 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/50 border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all"
-                  placeholder="••••••••"
+                  placeholder="********"
                   required
                 />
                 <button
@@ -153,3 +153,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+

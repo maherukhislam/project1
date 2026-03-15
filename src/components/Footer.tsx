@@ -85,7 +85,7 @@ const Footer: React.FC = () => {
 
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-400 text-sm">
-            © {new Date().getFullYear()} StudyGlobal. All rights reserved.
+            (c) {new Date().getFullYear()} StudyGlobal. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link to="/privacy" className="text-slate-400 hover:text-sky-400 text-sm transition-colors">
@@ -102,3 +102,4 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
+
