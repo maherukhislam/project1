@@ -17,7 +17,7 @@ insert into auth.users (
   aud,
   role
 )
-values (
+select
   gen_random_uuid(),
   'admin@studyglobal.com',
   crypt('Admin123!', gen_salt('bf')),
@@ -28,7 +28,6 @@ values (
   '{"name":"Admin","role":"admin"}'::jsonb,
   'authenticated',
   'authenticated'
-)
 where not exists (
   select 1 from auth.users where email = 'admin@studyglobal.com'
 );
@@ -46,7 +45,7 @@ insert into auth.users (
   aud,
   role
 )
-values (
+select
   gen_random_uuid(),
   'student@studyglobal.com',
   crypt('Student123!', gen_salt('bf')),
@@ -57,7 +56,6 @@ values (
   '{"name":"Demo Student","role":"student"}'::jsonb,
   'authenticated',
   'authenticated'
-)
 where not exists (
   select 1 from auth.users where email = 'student@studyglobal.com'
 );
