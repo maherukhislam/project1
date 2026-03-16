@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const authBypass = import.meta.env.VITE_AUTH_BYPASS === 'true';
 
   const ensureSupabaseEnabled = () => {
     if (!supabaseEnabled) {
@@ -70,6 +71,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    if (authBypass) {
+      const demoUser: User = { id: 'local-demo', email: 'admin@studyglobal.com' };
+      const demoProfile: Profile = {
+        id: 0,
+        user_id: 'local-demo',
+        name: 'Admin (Bypass)',
+        email: 'admin@studyglobal.com',
+        profile_completion: 100,
+        role: 'admin',
+        created_at: new Date().toISOString()
+      };
+      setUser(demoUser);
+      setProfile(demoProfile);
+      setLoading(false);
+      return;
+    }
     if (!supabaseEnabled) {
       setLoading(false);
       return;
@@ -93,12 +110,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (authBypass) {
+      setUser({ id: 'local-demo', email });
+      setProfile({
+        id: 0,
+        user_id: 'local-demo',
+        name: 'Admin (Bypass)',
+        email,
+        profile_completion: 100,
+        role: 'admin',
+        created_at: new Date().toISOString()
+      });
+      return;
+    }
     ensureSupabaseEnabled();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    if (authBypass) {
+      setUser({ id: 'local-demo', email });
+      setProfile({
+        id: 0,
+        user_id: 'local-demo',
+        name,
+        email,
+        profile_completion: 40,
+        role: 'student',
+        created_at: new Date().toISOString()
+      });
+      return;
+    }
     ensureSupabaseEnabled();
     const { error } = await supabase.auth.signUp({
       email,
@@ -116,6 +159,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    if (authBypass) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
     ensureSupabaseEnabled();
     await supabase.auth.signOut();
     setUser(null);
