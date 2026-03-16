@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed:users": "node scripts/create-default-users.mjs",
-    "reset:auth": "node scripts/reset-auth-users.mjs"
+    "reset:auth": "node scripts/reset-auth-users.mjs",
+    "reset:demo-passwords": "node scripts/reset-demo-passwords.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
