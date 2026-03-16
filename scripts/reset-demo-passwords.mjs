@@ -11,8 +11,16 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 const targets = [
-  { email: 'admin@studyglobal.com', password: 'Admin123!' },
-  { email: 'student@studyglobal.com', password: 'Student123!' }
+  {
+    email: 'admin@studyglobal.com',
+    id: process.env.ADMIN_UID,
+    password: 'Admin123!'
+  },
+  {
+    email: 'student@studyglobal.com',
+    id: process.env.STUDENT_UID,
+    password: 'Student123!'
+  }
 ];
 
 async function findUserByEmail(email) {
@@ -36,9 +44,16 @@ async function findUserByEmail(email) {
 for (const t of targets) {
   // eslint-disable-next-line no-console
   console.log(`Resetting ${t.email}...`);
-  const user = await findUserByEmail(t.email);
+  let user = null;
+  if (t.id) {
+    user = { id: t.id };
+  } else {
+    user = await findUserByEmail(t.email);
+  }
   if (!user) {
-    throw new Error(`User not found: ${t.email}`);
+    throw new Error(
+      `User not found: ${t.email}. Provide ADMIN_UID/STUDENT_UID to reset by ID.`
+    );
   }
   const { error } = await supabase.auth.admin.updateUserById(user.id, {
     password: t.password,
