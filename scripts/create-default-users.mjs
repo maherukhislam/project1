@@ -37,27 +37,22 @@ async function ensureUser(user) {
 
   const existing = list?.users?.find((u) => u.email === user.email);
 
-  if (existing) {
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      existing.id,
-      {
-        password: user.password,
-        email_confirm: true,
-        user_metadata: { name: user.name, role: user.role }
-      }
+  if (!existing) {
+    throw new Error(
+      `User ${user.email} not found. Create it in Supabase Auth UI first.`
     );
-    if (updateError) throw updateError;
-    return existing.id;
   }
 
-  const { data, error } = await supabase.auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: { name: user.name, role: user.role }
-  });
-  if (error) throw error;
-  return data.user.id;
+  const { error: updateError } = await supabase.auth.admin.updateUserById(
+    existing.id,
+    {
+      password: user.password,
+      email_confirm: true,
+      user_metadata: { name: user.name, role: user.role }
+    }
+  );
+  if (updateError) throw updateError;
+  return existing.id;
 }
 
 async function ensureProfile(userId, user) {
