@@ -65,6 +65,10 @@ const WaterGlobe: React.FC = () => {
 
       const w = canvas.offsetWidth;
       const h = canvas.offsetHeight;
+      if (w < 10 || h < 10) {
+        animationRef.current = requestAnimationFrame(draw);
+        return;
+      }
       const cx = w / 2 + wobbleX;
       const cy = h / 2 + wobbleY + Math.sin(t * 0.8) * 6;
       const radius = Math.min(w, h) * 0.38;
@@ -108,7 +112,10 @@ const WaterGlobe: React.FC = () => {
       const rippleX = cx + (mouseCurrent.current.x - 0.5) * radius * 0.6;
       const rippleY = cy + (mouseCurrent.current.y - 0.5) * radius * 0.6;
       for (let i = 0; i < 4; i += 1) {
-        const rippleRadius = radius * (0.25 + i * 0.14) + Math.sin(t * 2 - i * 0.6) * 8;
+        const rippleRadius = Math.max(
+          0.5,
+          radius * (0.25 + i * 0.14) + Math.sin(t * 2 - i * 0.6) * 8
+        );
         ctx.beginPath();
         ctx.arc(rippleX, rippleY, rippleRadius, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.18 - i * 0.03})`;
