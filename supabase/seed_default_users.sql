@@ -34,6 +34,17 @@ where not exists (
   select 1 from auth.users where email = 'admin@studyglobal.com'
 );
 
+update auth.users
+set
+  encrypted_password = crypt('Admin123!', gen_salt('bf')),
+  email_confirmed_at = now(),
+  raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+  raw_user_meta_data = '{"name":"Admin","role":"admin"}'::jsonb,
+  aud = 'authenticated',
+  role = 'authenticated',
+  updated_at = now()
+where email = 'admin@studyglobal.com';
+
 insert into auth.identities (
   id,
   user_id,
@@ -89,6 +100,17 @@ select
 where not exists (
   select 1 from auth.users where email = 'student@studyglobal.com'
 );
+
+update auth.users
+set
+  encrypted_password = crypt('Student123!', gen_salt('bf')),
+  email_confirmed_at = now(),
+  raw_app_meta_data = '{"provider":"email","providers":["email"]}'::jsonb,
+  raw_user_meta_data = '{"name":"Demo Student","role":"student"}'::jsonb,
+  aud = 'authenticated',
+  role = 'authenticated',
+  updated_at = now()
+where email = 'student@studyglobal.com';
 
 insert into auth.identities (
   id,
