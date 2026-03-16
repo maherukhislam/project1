@@ -29,13 +29,23 @@ const users = [
 ];
 
 async function ensureUser(user) {
-  const { data: list, error: listError } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 200
-  });
-  if (listError) throw listError;
+  const perPage = Number(process.env.SUPABASE_USERS_PAGE_SIZE || 1000);
+  let page = 1;
+  let existing = null;
 
-  const existing = list?.users?.find((u) => u.email === user.email);
+  while (!existing) {
+    const { data: list, error: listError } =
+      await supabase.auth.admin.listUsers({
+        page,
+        perPage
+      });
+    if (listError) throw listError;
+    const users = list?.users || [];
+    existing = users.find((u) => u.email === user.email) || null;
+    if (users.length < perPage) break;
+    page += 1;
+    if (page > 50) break;
+  }
 
   if (!existing) {
     throw new Error(
