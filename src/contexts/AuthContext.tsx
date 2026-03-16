@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const authBypass = import.meta.env.VITE_AUTH_BYPASS === 'true';
+  const authBypass = import.meta.env.VITE_AUTH_BYPASS === 'true' && import.meta.env.DEV;
 
   const ensureSupabaseEnabled = () => {
     if (!supabaseEnabled) {
