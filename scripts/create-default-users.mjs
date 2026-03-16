@@ -10,6 +10,14 @@ if (!supabaseUrl || !serviceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
+const debug = process.env.SUPABASE_DEBUG === '1';
+const projectRef = (() => {
+  try {
+    return new URL(supabaseUrl).hostname.split('.')[0];
+  } catch {
+    return 'unknown';
+  }
+})();
 
 const users = [
   {
@@ -32,6 +40,7 @@ async function ensureUser(user) {
   const perPage = Number(process.env.SUPABASE_USERS_PAGE_SIZE || 1000);
   let page = 1;
   let existing = null;
+  let totalScanned = 0;
 
   while (!existing) {
     const { data: list, error: listError } =
@@ -41,6 +50,14 @@ async function ensureUser(user) {
       });
     if (listError) throw listError;
     const users = list?.users || [];
+    totalScanned += users.length;
+    if (debug) {
+      const firstEmail = users[0]?.email || 'none';
+      const lastEmail = users[users.length - 1]?.email || 'none';
+      console.log(
+        `[debug] page ${page} users=${users.length} first=${firstEmail} last=${lastEmail}`
+      );
+    }
     existing = users.find((u) => u.email === user.email) || null;
     if (users.length < perPage) break;
     page += 1;
@@ -49,7 +66,8 @@ async function ensureUser(user) {
 
   if (!existing) {
     throw new Error(
-      `User ${user.email} not found. Create it in Supabase Auth UI first.`
+      `User ${user.email} not found after scanning ${totalScanned} users. ` +
+        `Check you are using the correct Service Role key for project ${projectRef}.`
     );
   }
 
