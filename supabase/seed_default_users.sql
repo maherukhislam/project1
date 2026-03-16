@@ -29,7 +29,9 @@ values (
   'authenticated',
   'authenticated'
 )
-on conflict (email) do nothing;
+where not exists (
+  select 1 from auth.users where email = 'admin@studyglobal.com'
+);
 
 -- Demo student user
 insert into auth.users (
@@ -56,7 +58,9 @@ values (
   'authenticated',
   'authenticated'
 )
-on conflict (email) do nothing;
+where not exists (
+  select 1 from auth.users where email = 'student@studyglobal.com'
+);
 
 -- Profiles (assumes a profiles table with user_id, name, email, role columns)
 insert into public.profiles (user_id, name, email, role, profile_completion, created_at)
