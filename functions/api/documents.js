@@ -40,7 +40,9 @@ export async function onRequest(context) {
         ? (minimal
           ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at, profiles(name, email)'
           : '*, profiles(name, email)')
-        : '*';
+        : (minimal
+          ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at'
+          : '*');
 
       let query = supabase.from('documents').select(selectFields);
 

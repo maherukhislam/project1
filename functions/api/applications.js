@@ -35,6 +35,16 @@ export async function onRequest(context) {
       const status = url.searchParams.get('status');
       const limit = Number(url.searchParams.get('limit') || 0);
       const minimal = url.searchParams.get('minimal') === '1';
+      const countOnly = url.searchParams.get('count_only') === '1';
+
+      if (countOnly) {
+        let countQuery = supabase.from('applications').select('id', { count: 'exact', head: true });
+        if (!isAdmin) countQuery = countQuery.eq('user_id', user.id);
+        if (status) countQuery = countQuery.eq('status', status);
+        const { count, error } = await countQuery;
+        if (error) throw error;
+        return new Response(JSON.stringify({ count: count || 0 }), { headers });
+      }
 
       const selectFields = minimal
         ? `id, user_id, status, created_at, intake, programs(name, universities(name)), profiles(name, email)`

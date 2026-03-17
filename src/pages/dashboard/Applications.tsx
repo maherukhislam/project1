@@ -14,7 +14,7 @@ const Applications: React.FC = () => {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        const data = await api.get('/api/applications');
+        const data = await api.get('/api/applications', { minimal: '1' });
         setApplications(data);
       } catch (err) {
         console.error('Failed to fetch applications:', err);
