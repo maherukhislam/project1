@@ -33,15 +33,29 @@ export async function onRequest(context) {
     if (request.method === 'GET') {
       const url = new URL(request.url);
       const user_id = url.searchParams.get('user_id');
-      
-      let query = supabase.from('documents').select('*');
-      
+      const limit = Number(url.searchParams.get('limit') || 0);
+      const minimal = url.searchParams.get('minimal') === '1';
+
+      const selectFields = isAdmin
+        ? (minimal
+          ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at, profiles(name, email)'
+          : '*, profiles(name, email)')
+        : (minimal
+          ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at'
+          : '*');
+
+      let query = supabase.from('documents').select(selectFields);
+
       if (isAdmin && user_id) {
         query = query.eq('user_id', user_id);
       } else if (!isAdmin) {
         query = query.eq('user_id', user.id);
       }
-      
+
+      if (limit > 0) {
+        query = query.limit(limit);
+      }
+
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });

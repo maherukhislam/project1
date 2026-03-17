@@ -20,10 +20,22 @@ export async function onRequest(context) {
   }
 
   try {
-    const { gpa, english_score, budget_max, preferred_country, preferred_subject, study_level } = await request.json();
+    const { gpa, english_score, budget_max, preferred_country, preferred_subject, study_level, limit } = await request.json();
 
-    let query = supabase.from('programs').select('*, universities(*)').eq('degree_level', study_level || 'Master');
-    
+    let query = supabase
+      .from('programs')
+      .select('id, name, degree_level, tuition_fee, duration, min_gpa_required, min_english_score, scholarship_available, universities(name, country)')
+      .eq('degree_level', study_level || 'Master');
+
+    if (preferred_country) {
+      query = query.eq('universities.country', preferred_country);
+    }
+
+    if (budget_max) {
+      // keep a small margin to avoid being too strict while reducing scanned rows
+      query = query.lte('tuition_fee', Math.round(Number(budget_max) * 1.25));
+    }
+
     const { data: programs, error } = await query;
     if (error) throw error;
 
@@ -84,10 +96,12 @@ export async function onRequest(context) {
       return { ...program, match_score: score, match_reasons: matches };
     });
 
+    const maxResults = Number(limit) > 0 ? Number(limit) : 20;
+
     const topMatches = scoredPrograms
       .filter(p => p.match_score >= 40)
       .sort((a, b) => b.match_score - a.match_score)
-      .slice(0, 20);
+      .slice(0, maxResults);
 
     return new Response(JSON.stringify(topMatches), { headers });
   } catch (err) {

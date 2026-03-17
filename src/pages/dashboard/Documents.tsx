@@ -24,7 +24,7 @@ const Documents: React.FC = () => {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const data = await api.get('/api/documents');
+        const data = await api.get('/api/documents', { minimal: '1' });
         setDocuments(data);
       } catch (err) {
         console.error('Failed to fetch documents:', err);
@@ -49,7 +49,7 @@ const Documents: React.FC = () => {
       });
 
       // Refresh documents
-      const data = await api.get('/api/documents');
+      const data = await api.get('/api/documents', { minimal: '1' });
       setDocuments(data);
     } catch (err) {
       console.error('Failed to upload document:', err);

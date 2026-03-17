@@ -6,7 +6,6 @@ import { api } from '../../lib/api';
 
 const AdminDocuments: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
-  const [, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -29,22 +28,11 @@ const AdminDocuments: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [studentsData] = await Promise.all([
-        api.get('/api/admin/students')
-      ]);
-      setStudents(studentsData);
-      
-      // Fetch documents for all students
-      const allDocs: any[] = [];
-      for (const student of studentsData) {
-        try {
-          const docs = await api.get('/api/documents', { user_id: student.user_id });
-          allDocs.push(...docs.map((d: any) => ({ ...d, student })));
-        } catch (err) {
-          // Skip if no documents
-        }
-      }
-      setDocuments(allDocs);
+      const docs = await api.get('/api/documents', { minimal: '1' });
+      setDocuments(docs.map((doc: any) => ({
+        ...doc,
+        student: doc.profiles || null
+      })));
     } catch (err) {
       console.error('Failed to fetch data:', err);
     } finally {

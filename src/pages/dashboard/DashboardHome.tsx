@@ -9,26 +9,30 @@ import { api } from '../../lib/api';
 
 const DashboardHome: React.FC = () => {
   const { profile } = useAuth();
-  const [applications, setApplications] = useState<any[]>([]);
+  const [applicationCount, setApplicationCount] = useState(0);
+  const [recentApplications, setRecentApplications] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appData, matchData] = await Promise.all([
-          api.get('/api/applications'),
+        const [appCountData, recentAppsData, matchData] = await Promise.all([
+          api.get('/api/applications', { count_only: '1' }),
+          api.get('/api/applications', { limit: '3', minimal: '1' }),
           profile ? api.post('/api/university-match', {
             gpa: profile.gpa,
             english_score: profile.english_score,
             budget_max: profile.budget_max,
             preferred_country: profile.preferred_country,
             preferred_subject: profile.preferred_subject,
-            study_level: profile.study_level
+            study_level: profile.study_level,
+            limit: 4
           }) : Promise.resolve([])
         ]);
-        setApplications(appData);
-        setRecommendations(matchData.slice(0, 4));
+        setApplicationCount(appCountData.count || 0);
+        setRecentApplications(recentAppsData);
+        setRecommendations(matchData);
       } catch (err) {
         console.error('Failed to fetch data:', err);
       } finally {
@@ -39,7 +43,7 @@ const DashboardHome: React.FC = () => {
   }, [profile]);
 
   const stats = [
-    { icon: FileText, label: 'Applications', value: applications.length, color: 'from-blue-500 to-indigo-600' },
+    { icon: FileText, label: 'Applications', value: applicationCount, color: 'from-blue-500 to-indigo-600' },
     { icon: GraduationCap, label: 'Matches', value: recommendations.length, color: 'from-green-500 to-emerald-600' },
     { icon: Award, label: 'Scholarships', value: 0, color: 'from-amber-500 to-orange-600' },
     { icon: Bell, label: 'Notifications', value: 2, color: 'from-purple-500 to-pink-600' }
@@ -136,7 +140,7 @@ const DashboardHome: React.FC = () => {
               </Link>
             </div>
 
-            {applications.length === 0 ? (
+            {recentApplications.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <p className="text-slate-600 mb-4">No applications yet</p>
@@ -150,7 +154,7 @@ const DashboardHome: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {applications.slice(0, 3).map((app) => (
+                {recentApplications.map((app) => (
                   <div key={app.id} className="flex items-center gap-4 p-4 rounded-xl bg-white/50 border border-slate-100">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                       <GraduationCap className="w-6 h-6 text-slate-400" />
@@ -239,16 +243,20 @@ const DashboardHome: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-4">
           {[
             { icon: Target, title: 'Find Universities', desc: 'Get matched with programs', link: '/dashboard/match', color: 'from-sky-500 to-blue-600' },
-            { icon: Award, title: 'Find Scholarships', desc: 'Discover funding options', link: '/dashboard/scholarships', color: 'from-amber-500 to-orange-600' },
-            { icon: BookOpen, title: 'Upload Documents', desc: 'Manage your files', link: '/dashboard/documents', color: 'from-green-500 to-emerald-600' }
+            { icon: FileText, title: 'Upload Documents', desc: 'Manage your documents', link: '/dashboard/documents', color: 'from-green-500 to-emerald-600' },
+            { icon: BookOpen, title: 'View Applications', desc: 'Track application status', link: '/dashboard/applications', color: 'from-purple-500 to-pink-600' }
           ].map((action, i) => (
             <Link key={i} to={action.link}>
-              <GlassCard className="p-6 h-full">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-4`}>
+              <GlassCard className="p-6 h-full group">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                   <action.icon className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-slate-900 mb-1">{action.title}</h3>
-                <p className="text-sm text-slate-500">{action.desc}</p>
+                <p className="text-sm text-slate-600 mb-3">{action.desc}</p>
+                <span className="text-sky-600 text-sm font-medium inline-flex items-center gap-1">
+                  Open
+                  <ChevronRight className="w-4 h-4" />
+                </span>
               </GlassCard>
             </Link>
           ))}
@@ -259,5 +267,3 @@ const DashboardHome: React.FC = () => {
 };
 
 export default DashboardHome;
-
-
