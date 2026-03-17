@@ -33,6 +33,7 @@ import Documents from './pages/dashboard/Documents';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
+import AdminAdmins from './pages/admin/AdminAdmins';
 import AdminApplications from './pages/admin/AdminApplications';
 import AdminUniversities from './pages/admin/AdminUniversities';
 import AdminPrograms from './pages/admin/AdminPrograms';
@@ -122,6 +123,7 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="students" element={<AdminStudents />} />
+            <Route path="admins" element={<AdminAdmins />} />
             <Route path="applications" element={<AdminApplications />} />
             <Route path="universities" element={<AdminUniversities />} />
             <Route path="programs" element={<AdminPrograms />} />
