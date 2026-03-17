@@ -38,6 +38,20 @@ export async function onRequest(context) {
 
     if (request.method === 'GET') {
       const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+      const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
+
+      if (!error && data) {
+        if (isBootstrapCandidate && data.role !== 'admin') {
+          const { data: updated, error: promoteError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin', profile_completion: Math.max(data.profile_completion || 0, 100) })
+            .eq('user_id', user.id)
+            .select('*')
+            .single();
+          if (promoteError) throw promoteError;
+          return new Response(JSON.stringify(updated), { headers });
+        }
+
 
       if (!error && data) {
         return new Response(JSON.stringify(data), { headers });
@@ -47,6 +61,7 @@ export async function onRequest(context) {
         throw error;
       }
 
+      const role = isBootstrapCandidate ? 'admin' : 'student';
       const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
       let role = 'student';
 
