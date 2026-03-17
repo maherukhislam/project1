@@ -149,13 +149,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       options: { data: { name, role: 'student' } }
     });
     if (error) throw error;
-    
-    // Create profile via API
-    try {
-      await api.post('/api/auth/signup', { email, password, name });
-    } catch (err) {
-      console.log('Profile creation handled by trigger or already exists');
-    }
   };
 
   const signOut = async () => {
