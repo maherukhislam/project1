@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, GraduationCap, BookOpen, Award, FileText, Upload, LogOut, Menu, X, Globe, BarChart3 } from 'lucide-react';
+import { Home, Users, GraduationCap, BookOpen, Award, FileText, Upload, LogOut, Menu, X, Globe, BarChart3, ShieldPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const AdminLayout: React.FC = () => {
@@ -12,6 +12,7 @@ const AdminLayout: React.FC = () => {
   const navItems = [
     { path: '/admin', icon: Home, label: 'Dashboard', exact: true },
     { path: '/admin/students', icon: Users, label: 'Students' },
+    { path: '/admin/admins', icon: ShieldPlus, label: 'Admins' },
     { path: '/admin/applications', icon: FileText, label: 'Applications' },
     { path: '/admin/universities', icon: GraduationCap, label: 'Universities' },
     { path: '/admin/programs', icon: BookOpen, label: 'Programs' },
