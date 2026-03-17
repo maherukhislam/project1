@@ -51,9 +51,6 @@ export async function onRequest(context) {
           if (promoteError) throw promoteError;
           return new Response(JSON.stringify(updated), { headers });
         }
-
-
-      if (!error && data) {
         return new Response(JSON.stringify(data), { headers });
       }
 
@@ -61,18 +58,8 @@ export async function onRequest(context) {
         throw error;
       }
 
-      const role = isBootstrapCandidate ? 'admin' : 'student';
-      const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
-      let role = 'student';
-
-      if (isBootstrapCandidate) {
-        const { count, error: countError } = await supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('role', 'admin');
-        if (countError) throw countError;
-        role = (count || 0) === 0 ? 'admin' : 'student';
-      }
+      // Logic for new user profile creation
+      let role = isBootstrapCandidate ? 'admin' : 'student';
 
       const payload = {
         user_id: user.id,
@@ -94,8 +81,6 @@ export async function onRequest(context) {
 
     if (request.method === 'PUT') {
       const updates = await request.json();
-      
-      // Calculate profile completion
       const fields = ['name', 'phone', 'nationality', 'preferred_country', 'education_level', 'gpa', 'english_score', 'english_test_type', 'study_level', 'preferred_subject', 'budget_min', 'budget_max', 'intake'];
       const filledFields = fields.filter(f => updates[f] || updates[f] === 0).length;
       const completion = Math.round((filledFields / fields.length) * 100);
