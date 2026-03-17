@@ -1,8 +1,17 @@
 import { getSupabase } from './_supabase.js';
 
+const DEFAULT_BOOTSTRAP_ADMIN_EMAIL = 'maherukhislam2007@gmail.com';
+
+const buildDefaultName = (user) => {
+  if (user.user_metadata?.name) return user.user_metadata.name;
+  if (user.email) return user.email.split('@')[0];
+  return 'New User';
+};
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
+  const bootstrapAdminEmail = (env.FIRST_ADMIN_EMAIL || DEFAULT_BOOTSTRAP_ADMIN_EMAIL).toLowerCase();
   
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -29,8 +38,45 @@ export async function onRequest(context) {
 
     if (request.method === 'GET') {
       const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-      if (error) throw error;
-      return new Response(JSON.stringify(data), { headers });
+      const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
+
+      if (!error && data) {
+        if (isBootstrapCandidate && data.role !== 'admin') {
+          const { data: updated, error: promoteError } = await supabase
+            .from('profiles')
+            .update({ role: 'admin', profile_completion: Math.max(data.profile_completion || 0, 100) })
+            .eq('user_id', user.id)
+            .select('*')
+            .single();
+          if (promoteError) throw promoteError;
+          return new Response(JSON.stringify(updated), { headers });
+        }
+
+        return new Response(JSON.stringify(data), { headers });
+      }
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      const role = isBootstrapCandidate ? 'admin' : 'student';
+
+      const payload = {
+        user_id: user.id,
+        email: user.email,
+        name: buildDefaultName(user),
+        role,
+        profile_completion: role === 'admin' ? 100 : 10
+      };
+
+      const { data: created, error: createError } = await supabase
+        .from('profiles')
+        .insert(payload)
+        .select('*')
+        .single();
+      if (createError) throw createError;
+
+      return new Response(JSON.stringify(created), { headers });
     }
 
     if (request.method === 'PUT') {

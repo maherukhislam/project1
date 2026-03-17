@@ -17,6 +17,9 @@ import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 
 // Dashboard Pages
 import DashboardLayout from './pages/dashboard/DashboardLayout';
@@ -30,6 +33,7 @@ import Documents from './pages/dashboard/Documents';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
+import AdminAdmins from './pages/admin/AdminAdmins';
 import AdminApplications from './pages/admin/AdminApplications';
 import AdminUniversities from './pages/admin/AdminUniversities';
 import AdminPrograms from './pages/admin/AdminPrograms';
@@ -86,6 +90,9 @@ function App() {
           <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
+          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
 
           {/* Student Dashboard Routes */}
           <Route
@@ -116,6 +123,7 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="students" element={<AdminStudents />} />
+            <Route path="admins" element={<AdminAdmins />} />
             <Route path="applications" element={<AdminApplications />} />
             <Route path="universities" element={<AdminUniversities />} />
             <Route path="programs" element={<AdminPrograms />} />
