@@ -52,6 +52,8 @@ export async function onRequest(context) {
           return new Response(JSON.stringify(updated), { headers });
         }
 
+
+      if (!error && data) {
         return new Response(JSON.stringify(data), { headers });
       }
 
@@ -60,6 +62,17 @@ export async function onRequest(context) {
       }
 
       const role = isBootstrapCandidate ? 'admin' : 'student';
+      const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
+      let role = 'student';
+
+      if (isBootstrapCandidate) {
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'admin');
+        if (countError) throw countError;
+        role = (count || 0) === 0 ? 'admin' : 'student';
+      }
 
       const payload = {
         user_id: user.id,
