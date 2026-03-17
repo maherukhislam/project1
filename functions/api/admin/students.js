@@ -46,11 +46,23 @@ export async function onRequest(context) {
         return new Response(JSON.stringify(data), { headers });
       }
       
-      const { data, error } = await supabase
+      const minimal = url.searchParams.get('minimal') === '1';
+      const limit = Number(url.searchParams.get('limit') || 0);
+      const selectFields = minimal
+        ? 'id, user_id, name, email, role, created_at, profile_completion'
+        : '*';
+
+      let query = supabase
         .from('profiles')
-        .select('*')
+        .select(selectFields)
         .eq('role', 'student')
         .order('created_at', { ascending: false });
+
+      if (limit > 0) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });
     }

@@ -16,12 +16,12 @@ const AdminDashboard: React.FC = () => {
       try {
         const [statsData, appsData, studentsData] = await Promise.all([
           api.get('/api/admin/stats'),
-          api.get('/api/applications'),
-          api.get('/api/admin/students')
+          api.get('/api/applications', { limit: '5', minimal: '1' }),
+          api.get('/api/admin/students', { limit: '5', minimal: '1' })
         ]);
         setStats(statsData);
-        setRecentApps(appsData.slice(0, 5));
-        setRecentStudents(studentsData.slice(0, 5));
+        setRecentApps(appsData);
+        setRecentStudents(studentsData);
       } catch (err) {
         console.error('Failed to fetch data:', err);
       } finally {

@@ -16,15 +16,22 @@ export function signInWithGoogle(appName: string = 'StudyGlobal'): void {
   const url = buildGoogleUrl(appName);
   if (!url) { console.warn('[google-auth] Missing VITE_GOOGLE_CLIENT_ID or VITE_GOOGLE_AUTH_PROXY'); return; }
 
-  window.open(url, 'google-auth', isMobile() ? '' : 'width=500,height=600');
+  const openedWindow = window.open(url, 'google-auth', isMobile() ? '' : 'width=500,height=600');
+  const proxyOrigin = new URL(import.meta.env.VITE_GOOGLE_AUTH_PROXY).origin;
 
   const handler = async (event: MessageEvent) => {
+    if (event.origin !== proxyOrigin || (openedWindow && event.source !== openedWindow)) {
+      return;
+    }
+
     if (event.data?.type === 'google-auth-denied') {
       window.removeEventListener('message', handler);
       return;
     }
     if (event.data?.type !== 'google-auth-success') return;
+
     window.removeEventListener('message', handler);
+
     if (event.data.access_token && event.data.refresh_token) {
       const { error } = await supabase.auth.setSession({ access_token: event.data.access_token, refresh_token: event.data.refresh_token });
       if (error) console.error('[google-auth] setSession failed:', error.message);
@@ -33,6 +40,7 @@ export function signInWithGoogle(appName: string = 'StudyGlobal'): void {
       if (error) console.error('[google-auth] signInWithIdToken failed:', error.message);
     }
   };
+
   window.addEventListener('message', handler);
 }
 
