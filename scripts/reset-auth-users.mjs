@@ -55,12 +55,10 @@ async function listAllUsers() {
 async function deleteAllUsers() {
   const users = await listAllUsers();
   for (const user of users) {
-    // eslint-disable-next-line no-console
     console.log(`Deleting ${user.email || user.id}...`);
     const { error } = await supabase.auth.admin.deleteUser(user.id);
     if (error) throw error;
   }
-  // eslint-disable-next-line no-console
   console.log(`Deleted ${users.length} users.`);
 }
 
@@ -75,15 +73,12 @@ async function createUser(u) {
   return data.user.id;
 }
 
-// eslint-disable-next-line no-console
 console.log('Resetting auth users...');
 await deleteAllUsers();
 
 for (const u of newUsers) {
-  // eslint-disable-next-line no-console
   console.log(`Creating ${u.email}...`);
   await createUser(u);
 }
 
-// eslint-disable-next-line no-console
 console.log('Auth users reset complete.');

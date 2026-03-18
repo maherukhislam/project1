@@ -51,5 +51,9 @@ export async function handleGoogleRedirect(): Promise<void> {
   window.history.replaceState({}, '', window.location.pathname);
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token });
   if (error) { console.error('[google-auth] signInWithIdToken failed:', error.message); return; }
-  try { window.close(); } catch {}
+  try {
+    window.close();
+  } catch (closeError) {
+    console.debug('[google-auth] window.close failed:', closeError);
+  }
 }

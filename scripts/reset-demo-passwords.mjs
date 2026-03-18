@@ -42,7 +42,6 @@ async function findUserByEmail(email) {
 }
 
 for (const t of targets) {
-  // eslint-disable-next-line no-console
   console.log(`Resetting ${t.email}...`);
   let user = null;
   if (t.id) {
@@ -62,5 +61,4 @@ for (const t of targets) {
   if (error) throw error;
 }
 
-// eslint-disable-next-line no-console
 console.log('Demo passwords reset.');

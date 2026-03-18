@@ -100,11 +100,9 @@ async function ensureProfile(userId, user) {
 }
 
 for (const user of users) {
-  // eslint-disable-next-line no-console
   console.log(`Ensuring ${user.email}...`);
   const userId = await ensureUser(user);
   await ensureProfile(userId, user);
 }
 
-// eslint-disable-next-line no-console
 console.log('Default users ready.');

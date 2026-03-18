@@ -72,23 +72,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (authBypass) {
-      const demoUser: User = { id: 'local-demo', email: 'admin@studyglobal.com' };
-      const demoProfile: Profile = {
-        id: 0,
-        user_id: 'local-demo',
-        name: 'Admin (Bypass)',
-        email: 'admin@studyglobal.com',
-        profile_completion: 100,
-        role: 'admin',
-        created_at: new Date().toISOString()
-      };
-      setUser(demoUser);
-      setProfile(demoProfile);
-      setLoading(false);
+      queueMicrotask(() => {
+        const demoUser: User = { id: 'local-demo', email: 'admin@studyglobal.com' };
+        const demoProfile: Profile = {
+          id: 0,
+          user_id: 'local-demo',
+          name: 'Admin (Bypass)',
+          email: 'admin@studyglobal.com',
+          profile_completion: 100,
+          role: 'admin',
+          created_at: new Date().toISOString()
+        };
+        setUser(demoUser);
+        setProfile(demoProfile);
+        setLoading(false);
+      });
       return;
     }
     if (!supabaseEnabled) {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
       return;
     }
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
@@ -107,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [authBypass]);
 
   const signIn = async (email: string, password: string) => {
     if (authBypass) {
