@@ -1,4 +1,10 @@
-const CURRENT_YEAR = new Date().getUTCFullYear();
+const detectedUtcYear = new Date().getUTCFullYear();
+const detectedLocalYear = new Date().getFullYear();
+const CURRENT_YEAR =
+  [detectedUtcYear, detectedLocalYear].find((year) => Number.isInteger(year) && year >= 2024 && year <= 2100) ||
+  2026;
+const MIN_LAST_EDUCATION_YEAR = 1980;
+const MAX_LAST_EDUCATION_YEAR = CURRENT_YEAR + 2;
 
 export const PROFILE_REQUIRED_FIELDS = [
   'name',
@@ -212,8 +218,11 @@ export function validateProfileInput(profile = {}) {
     errors.english_score = `${testType} score must be between 0 and ${englishMax}.`;
   }
 
-  if (lastEducationYear !== null && (lastEducationYear < 1980 || lastEducationYear > CURRENT_YEAR + 2)) {
-    errors.last_education_year = `Last education year must be between 1980 and ${CURRENT_YEAR + 2}.`;
+  if (
+    lastEducationYear !== null &&
+    (lastEducationYear < MIN_LAST_EDUCATION_YEAR || lastEducationYear > MAX_LAST_EDUCATION_YEAR)
+  ) {
+    errors.last_education_year = `Last education year must be between ${MIN_LAST_EDUCATION_YEAR} and ${MAX_LAST_EDUCATION_YEAR}.`;
   }
 
   const allowedStudyLevels = EDUCATION_TO_STUDY_LEVEL[profile.education_level] || [];

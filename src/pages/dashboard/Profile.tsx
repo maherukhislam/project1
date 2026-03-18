@@ -9,6 +9,8 @@ import { api } from '../../lib/api';
 const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands', 'France', 'Ireland', 'New Zealand', 'Singapore'];
 const nationalities = ['American', 'British', 'Canadian', 'Chinese', 'Indian', 'Nigerian', 'Pakistani', 'Bangladeshi', 'Vietnamese', 'Indonesian', 'Other'];
 const subjects = ['Computer Science', 'Business Administration', 'Engineering', 'Medicine', 'Law', 'Arts & Design', 'Social Sciences', 'Natural Sciences', 'Education', 'Other'];
+const MIN_LAST_EDUCATION_YEAR = 1980;
+const MAX_LAST_EDUCATION_YEAR = new Date().getFullYear() + 2;
 
 const emptyForm = {
   name: '',
@@ -231,7 +233,15 @@ const Profile: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Last Education Year *</label>
-              <input type="number" value={formData.last_education_year} onChange={(e) => setField('last_education_year', e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20" />
+              <input
+                type="number"
+                min={MIN_LAST_EDUCATION_YEAR}
+                max={MAX_LAST_EDUCATION_YEAR}
+                value={formData.last_education_year}
+                onChange={(e) => setField('last_education_year', e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+              />
+              <p className="mt-2 text-xs text-slate-500">Use a year between {MIN_LAST_EDUCATION_YEAR} and {MAX_LAST_EDUCATION_YEAR}.</p>
               {fieldHint('last_education_year')}
             </div>
             <div>
