@@ -73,7 +73,7 @@ const DashboardHome: React.FC = () => {
 
   const profileCompletion = profileState?.profile_completion || profile?.profile_completion || 0;
   const documentTypes = profileState?.document_requirements || ['passport', 'academic_certificate', 'transcript', 'english_test', 'cv'];
-  const uploadedRequiredCount = documentTypes.filter((type) => documents.some((doc) => doc.document_type === type)).length;
+  const uploadedRequiredCount = documentTypes.filter((type: string) => documents.some((doc) => doc.document_type === type)).length;
   const applicationCount = recentApplications.length;
   const submittedCount = recentApplications.filter((app) =>
     ['submitted', 'under_review', 'accepted', 'visa_processing'].includes(app.status)
