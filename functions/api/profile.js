@@ -123,9 +123,30 @@ export async function onRequest(context) {
       const fields = ['name', 'phone', 'nationality', 'preferred_country', 'education_level', 'gpa', 'english_score', 'english_test_type', 'study_level', 'preferred_subject', 'budget_min', 'budget_max', 'intake'];
       const filledFields = fields.filter(f => updates[f] || updates[f] === 0).length;
       const completion = Math.round((filledFields / fields.length) * 100);
-      updates.profile_completion = completion;
+      const payload = {
+        user_id: user.id,
+        email: user.email,
+        name: updates.name || buildDefaultName(user),
+        role: user.user_metadata?.role || (user.email?.toLowerCase() === bootstrapAdminEmail ? 'admin' : 'student'),
+        ...updates,
+        profile_completion: completion
+      };
 
-      const { data, error } = await supabase.from('profiles').update(updates).eq('user_id', user.id).select().single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(payload, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (isRecursiveProfilesPolicyError(error)) {
+        return new Response(JSON.stringify({
+          ...buildFallbackProfile(user, user.email?.toLowerCase() === bootstrapAdminEmail),
+          ...updates,
+          profile_completion: completion,
+          warning: 'Profile changes could not be persisted because the profiles RLS policy is recursive.'
+        }), { headers });
+      }
+
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });
     }

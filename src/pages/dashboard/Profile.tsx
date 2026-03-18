@@ -10,6 +10,7 @@ const Profile: React.FC = () => {
   const { profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -50,13 +51,18 @@ const Profile: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setSaved(false);
+    setError('');
 
     try {
       const updates: any = { ...formData };
       if (updates.gpa) updates.gpa = parseFloat(updates.gpa);
+      else updates.gpa = null;
       if (updates.english_score) updates.english_score = parseFloat(updates.english_score);
+      else updates.english_score = null;
       if (updates.budget_min) updates.budget_min = parseInt(updates.budget_min);
+      else updates.budget_min = null;
       if (updates.budget_max) updates.budget_max = parseInt(updates.budget_max);
+      else updates.budget_max = null;
 
       await api.put('/api/profile', updates);
       await refreshProfile();
@@ -64,6 +70,7 @@ const Profile: React.FC = () => {
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Failed to update profile:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save profile');
     } finally {
       setLoading(false);
     }
@@ -89,6 +96,12 @@ const Profile: React.FC = () => {
             <span className="text-sm">Complete</span>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
