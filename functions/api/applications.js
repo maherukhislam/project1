@@ -1,5 +1,16 @@
 import { getSupabase } from './_supabase.js';
 
+function mergeProfiles(applications, profiles) {
+  const profileByUserId = new Map(
+    (profiles || []).map((item) => [item.user_id, { name: item.name, email: item.email }])
+  );
+
+  return (applications || []).map((application) => ({
+    ...application,
+    profiles: profileByUserId.get(application.user_id) || null
+  }));
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -47,11 +58,10 @@ export async function onRequest(context) {
       }
 
       const selectFields = minimal
-        ? `id, user_id, status, created_at, intake, notes, program_id, programs(id, name, degree_level, universities(id, name, country, logo_url)), profiles(name, email)`
+        ? `id, user_id, status, created_at, intake, notes, program_id, programs(id, name, degree_level, universities(id, name, country, logo_url))`
         : `
           *,
-          programs(id, name, degree_level, universities(id, name, country, logo_url)),
-          profiles(name, email)
+          programs(id, name, degree_level, universities(id, name, country, logo_url))
         `;
 
       let query = supabase.from('applications').select(selectFields);
@@ -65,7 +75,19 @@ export async function onRequest(context) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
-      return new Response(JSON.stringify(data), { headers });
+
+      if (!isAdmin || !data?.length) {
+        return new Response(JSON.stringify(data || []), { headers });
+      }
+
+      const userIds = [...new Set(data.map((application) => application.user_id).filter(Boolean))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, name, email')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+      return new Response(JSON.stringify(mergeProfiles(data, profiles)), { headers });
     }
 
     const body = await request.json();

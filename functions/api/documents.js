@@ -1,5 +1,16 @@
 import { getSupabase } from './_supabase.js';
 
+function mergeProfiles(documents, profiles) {
+  const profileByUserId = new Map(
+    (profiles || []).map((item) => [item.user_id, { name: item.name, email: item.email }])
+  );
+
+  return (documents || []).map((document) => ({
+    ...document,
+    profiles: profileByUserId.get(document.user_id) || null
+  }));
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -38,8 +49,8 @@ export async function onRequest(context) {
 
       const selectFields = isAdmin
         ? (minimal
-          ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at, profiles(name, email)'
-          : '*, profiles(name, email)')
+          ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at'
+          : '*')
         : (minimal
           ? 'id, user_id, document_type, file_name, file_url, file_size, status, created_at'
           : '*');
@@ -58,7 +69,19 @@ export async function onRequest(context) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
-      return new Response(JSON.stringify(data), { headers });
+
+      if (!isAdmin || !data?.length) {
+        return new Response(JSON.stringify(data || []), { headers });
+      }
+
+      const userIds = [...new Set(data.map((document) => document.user_id).filter(Boolean))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, name, email')
+        .in('user_id', userIds);
+
+      if (profilesError) throw profilesError;
+      return new Response(JSON.stringify(mergeProfiles(data, profiles)), { headers });
     }
 
     const body = await request.json();

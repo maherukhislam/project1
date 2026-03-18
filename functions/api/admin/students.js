@@ -39,11 +39,19 @@ export async function onRequest(context) {
       if (id) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*, applications(*, programs(name, universities(name)))')
+          .select('*')
           .eq('id', parseInt(id))
           .single();
         if (error) throw error;
-        return new Response(JSON.stringify(data), { headers });
+
+        const { data: applications, error: applicationsError } = await supabase
+          .from('applications')
+          .select('*, programs(name, universities(name, country))')
+          .eq('user_id', data.user_id)
+          .order('created_at', { ascending: false });
+
+        if (applicationsError) throw applicationsError;
+        return new Response(JSON.stringify({ ...data, applications: applications || [] }), { headers });
       }
       
       const minimal = url.searchParams.get('minimal') === '1';
