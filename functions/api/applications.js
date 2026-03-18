@@ -47,10 +47,10 @@ export async function onRequest(context) {
       }
 
       const selectFields = minimal
-        ? `id, user_id, status, created_at, intake, programs(name, universities(name)), profiles(name, email)`
+        ? `id, user_id, status, created_at, intake, notes, program_id, programs(id, name, degree_level, universities(id, name, country, logo_url)), profiles(name, email)`
         : `
           *,
-          programs(name, degree_level, universities(name, country, logo_url)),
+          programs(id, name, degree_level, universities(id, name, country, logo_url)),
           profiles(name, email)
         `;
 
@@ -88,8 +88,13 @@ export async function onRequest(context) {
         delete updates.status;
         delete updates.counselor_id;
       }
-      
-      const { data, error } = await supabase.from('applications').update(updates).eq('id', id).select().single();
+
+      let updateQuery = supabase.from('applications').update(updates).eq('id', id);
+      if (!isAdmin) {
+        updateQuery = updateQuery.eq('user_id', user.id);
+      }
+
+      const { data, error } = await updateQuery.select().single();
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });
     }

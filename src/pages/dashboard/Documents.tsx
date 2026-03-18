@@ -9,6 +9,7 @@ const Documents: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
 
   const documentTypes = [
     { type: 'passport', label: 'Passport', required: true },
@@ -37,6 +38,7 @@ const Documents: React.FC = () => {
 
   const handleUpload = async (type: string, file: File) => {
     setUploading(true);
+    setUploadMessage('');
     try {
       // In production, this would upload to R2/S3 first
       const fakeUrl = `https://storage.example.com/${Date.now()}-${file.name}`;
@@ -51,8 +53,10 @@ const Documents: React.FC = () => {
       // Refresh documents
       const data = await api.get('/api/documents', { minimal: '1' });
       setDocuments(data);
+      setUploadMessage(`${file.name} added as a pending document.`);
     } catch (err) {
       console.error('Failed to upload document:', err);
+      setUploadMessage('Document upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -120,11 +124,14 @@ const Documents: React.FC = () => {
           <span className="text-sky-600 font-semibold">{completedCount}/{requiredCount} Required</span>
         </div>
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-sky-500 to-blue-600 rounded-full transition-all"
-            style={{ width: `${(completedCount / requiredCount) * 100}%` }}
-          />
+        <div
+          className="h-full bg-gradient-to-r from-sky-500 to-blue-600 rounded-full transition-all"
+          style={{ width: `${(completedCount / requiredCount) * 100}%` }}
+        />
         </div>
+        {uploadMessage && (
+          <p className="mt-4 text-sm text-slate-600">{uploadMessage}</p>
+        )}
       </GlassCard>
 
       {/* Document Types */}

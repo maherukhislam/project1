@@ -145,7 +145,7 @@ const Profile: React.FC = () => {
 
           {/* Academic Information */}
           <GlassCard className="p-6" hover={false}>
-            <h2 className="text-xl font-semibold text-slate-900 mb-6">🎓 Academic Information</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-6">Academic Information</h2>
             <div className="grid md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Previous Education Level</label>
@@ -228,7 +228,7 @@ const Profile: React.FC = () => {
 
           {/* Preferences */}
           <GlassCard className="p-6" hover={false}>
-            <h2 className="text-xl font-semibold text-slate-900 mb-6">⚙️ Preferences</h2>
+            <h2 className="text-xl font-semibold text-slate-900 mb-6">Preferences</h2>
             <div className="grid md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Budget Min (USD/year)</label>
