@@ -151,31 +151,44 @@ const DashboardLayout: React.FC = () => {
             {navGroups.map((group) => (
               <div
                 key={group.title}
-                className="rounded-[1.6rem] border border-white/70 bg-white/60 p-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+                className="rounded-[1.8rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(248,244,236,0.78))] p-3 shadow-[0_14px_30px_rgba(15,23,42,0.05)]"
               >
-                <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  {group.title}
-                </p>
+                <div className="mb-3 flex items-center justify-between px-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+                    {group.title}
+                  </p>
+                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    {group.items.length}
+                  </span>
+                </div>
                 <ul className="space-y-2">
                   {group.items.map((item) => (
                     <li key={item.path}>
                       <Link
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex min-h-14 items-center gap-3 rounded-[1.15rem] px-4 py-3.5 text-[15px] transition-all ${
+                        className={`group flex min-h-15 items-center gap-3 rounded-[1.25rem] border px-4 py-3.5 text-[15px] transition-all ${
                           isActive(item.path, item.exact)
-                            ? 'bg-slate-900 text-white shadow-[0_12px_25px_rgba(15,23,42,0.16)]'
-                            : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]'
+                            : 'border-transparent bg-white/55 text-slate-600 hover:border-white hover:bg-white hover:text-slate-900'
                         }`}
                       >
                         <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                            isActive(item.path, item.exact) ? 'bg-white/12' : 'bg-[#f6f1e8] text-slate-700'
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] transition-all ${
+                            isActive(item.path, item.exact)
+                              ? 'bg-white/12 text-white'
+                              : 'bg-[#f3ede2] text-slate-700 group-hover:bg-[#ede6d7]'
                           }`}
                         >
                           <item.icon className="h-5 w-5" />
                         </span>
-                        <span className="truncate font-medium">{item.label}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{item.label}</span>
+                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-white/65' : 'text-slate-400'}`}>
+                            {group.title === 'Overview' ? 'Your core workspace' : group.title === 'Plan' ? 'Explore options and shortlist' : 'Move toward submission'}
+                          </span>
+                        </div>
+                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-white/70' : 'text-slate-300 group-hover:text-slate-500'}`} />
                       </Link>
                     </li>
                   ))}

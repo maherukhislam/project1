@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, GraduationCap, BookOpen, Award, FileText, Upload, LogOut, Menu, X, Globe, BarChart3, ShieldPlus } from 'lucide-react';
+import { Home, Users, GraduationCap, BookOpen, Award, FileText, Upload, LogOut, Menu, X, Globe, BarChart3, ShieldPlus, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const AdminLayout: React.FC = () => {
@@ -133,26 +133,48 @@ const AdminLayout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+          <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 py-5">
             {navGroups.map((group) => (
-              <div key={group.title}>
-                <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {group.title}
-                </p>
-                <ul className="space-y-1">
+              <div
+                key={group.title}
+                className="rounded-[1.5rem] border border-slate-700/80 bg-[linear-gradient(180deg,rgba(30,41,59,0.72),rgba(15,23,42,0.68))] p-3 shadow-[0_14px_28px_rgba(2,6,23,0.22)]"
+              >
+                <div className="mb-3 flex items-center justify-between px-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    {group.title}
+                  </p>
+                  <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {group.items.length}
+                  </span>
+                </div>
+                <ul className="space-y-2">
                   {group.items.map((item) => (
                     <li key={item.path}>
                       <Link
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                        className={`group flex min-h-14 items-center gap-3 rounded-[1.15rem] border px-4 py-3.5 transition-all ${
                           isActive(item.path, item.exact)
-                            ? 'bg-sky-500/20 text-sky-400 font-medium ring-1 ring-sky-500/20'
-                            : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                            ? 'border-sky-500/20 bg-sky-500/15 text-sky-300 shadow-[0_14px_28px_rgba(14,165,233,0.12)]'
+                            : 'border-transparent bg-slate-800/45 text-slate-400 hover:border-slate-700 hover:bg-slate-700/50 hover:text-white'
                         }`}
                       >
-                        <item.icon className="w-5 h-5" />
-                        {item.label}
+                        <span
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] transition-all ${
+                            isActive(item.path, item.exact)
+                              ? 'bg-sky-400/10 text-sky-300'
+                              : 'bg-slate-900/70 text-slate-300 group-hover:bg-slate-900'
+                          }`}
+                        >
+                          <item.icon className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{item.label}</span>
+                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-sky-100/60' : 'text-slate-500'}`}>
+                            {group.title === 'Overview' ? 'High-level performance view' : group.title === 'Admissions' ? 'Daily intake and processing' : group.title === 'Academics' ? 'Catalog and offering management' : 'Permissions and publishing'}
+                          </span>
+                        </div>
+                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-sky-200/70' : 'text-slate-600 group-hover:text-slate-300'}`} />
                       </Link>
                     </li>
                   ))}
