@@ -133,36 +133,36 @@ const AdminLayout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 py-5">
+          <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 py-5 lg:space-y-6 lg:px-5">
             {navGroups.map((group) => (
               <div
                 key={group.title}
-                className="rounded-[1.5rem] border border-slate-700/80 bg-[linear-gradient(180deg,rgba(30,41,59,0.72),rgba(15,23,42,0.68))] p-3 shadow-[0_14px_28px_rgba(2,6,23,0.22)]"
+                className="rounded-[1.5rem] border border-slate-700/80 bg-[linear-gradient(180deg,rgba(30,41,59,0.72),rgba(15,23,42,0.68))] p-3 shadow-[0_14px_28px_rgba(2,6,23,0.22)] lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
               >
-                <div className="mb-3 flex items-center justify-between px-3">
+                <div className="mb-3 flex items-center justify-between px-3 lg:mb-2 lg:px-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                     {group.title}
                   </p>
-                  <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:bg-slate-900">
                     {group.items.length}
                   </span>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-2 lg:space-y-2.5 lg:border-l lg:border-slate-700 lg:pl-4">
                   {group.items.map((item) => (
                     <li key={item.path}>
                       <Link
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`group flex min-h-14 items-center gap-3 rounded-[1.15rem] border px-4 py-3.5 transition-all ${
+                        className={`group flex min-h-14 items-center gap-3 rounded-[1.15rem] border px-4 py-3.5 transition-all lg:min-h-0 lg:rounded-[1rem] lg:px-3.5 lg:py-3 ${
                           isActive(item.path, item.exact)
-                            ? 'border-sky-500/20 bg-sky-500/15 text-sky-300 shadow-[0_14px_28px_rgba(14,165,233,0.12)]'
-                            : 'border-transparent bg-slate-800/45 text-slate-400 hover:border-slate-700 hover:bg-slate-700/50 hover:text-white'
+                            ? 'border-sky-500/20 bg-sky-500/15 text-sky-300 shadow-[0_14px_28px_rgba(14,165,233,0.12)] lg:border-slate-700 lg:bg-slate-800/95 lg:text-white lg:shadow-[0_12px_24px_rgba(2,6,23,0.2)]'
+                            : 'border-transparent bg-slate-800/45 text-slate-400 hover:border-slate-700 hover:bg-slate-700/50 hover:text-white lg:bg-transparent lg:hover:border-slate-700 lg:hover:bg-slate-800/75'
                         }`}
                       >
                         <span
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] transition-all ${
                             isActive(item.path, item.exact)
-                              ? 'bg-sky-400/10 text-sky-300'
+                              ? 'bg-sky-400/10 text-sky-300 lg:bg-sky-500/15 lg:text-sky-300'
                               : 'bg-slate-900/70 text-slate-300 group-hover:bg-slate-900'
                           }`}
                         >
@@ -170,11 +170,11 @@ const AdminLayout: React.FC = () => {
                         </span>
                         <div className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{item.label}</span>
-                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-sky-100/60' : 'text-slate-500'}`}>
+                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-sky-100/60 lg:text-slate-400' : 'text-slate-500'}`}>
                             {group.title === 'Overview' ? 'High-level performance view' : group.title === 'Admissions' ? 'Daily intake and processing' : group.title === 'Academics' ? 'Catalog and offering management' : 'Permissions and publishing'}
                           </span>
                         </div>
-                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-sky-200/70' : 'text-slate-600 group-hover:text-slate-300'}`} />
+                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-sky-200/70 lg:text-slate-500' : 'text-slate-600 group-hover:text-slate-300'}`} />
                       </Link>
                     </li>
                   ))}

@@ -1,17 +1,14 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight,
   Award,
   BellDot,
-  Compass,
   FileText,
   Globe,
   GraduationCap,
   Home,
   LogOut,
   Menu,
-  Sparkles,
   Target,
   Upload,
   User,
@@ -147,36 +144,36 @@ const DashboardLayout: React.FC = () => {
             </div>
           </div>
 
-          <nav className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6">
+          <nav className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6 lg:space-y-6 lg:px-6">
             {navGroups.map((group) => (
               <div
                 key={group.title}
-                className="rounded-[1.8rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(248,244,236,0.78))] p-3 shadow-[0_14px_30px_rgba(15,23,42,0.05)]"
+                className="rounded-[1.8rem] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(248,244,236,0.78))] p-3 shadow-[0_14px_30px_rgba(15,23,42,0.05)] lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
               >
-                <div className="mb-3 flex items-center justify-between px-3">
+                <div className="mb-3 flex items-center justify-between px-3 lg:mb-2 lg:px-0">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
                     {group.title}
                   </p>
-                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 lg:bg-[#f3ede2]">
                     {group.items.length}
                   </span>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-2 lg:space-y-2.5 lg:border-l lg:border-slate-300/70 lg:pl-4">
                   {group.items.map((item) => (
                     <li key={item.path}>
                       <Link
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`group flex min-h-15 items-center gap-3 rounded-[1.25rem] border px-4 py-3.5 text-[15px] transition-all ${
+                        className={`group flex min-h-15 items-center gap-3 rounded-[1.25rem] border px-4 py-3.5 text-[15px] transition-all lg:min-h-0 lg:rounded-[1.15rem] lg:px-3.5 lg:py-3 ${
                           isActive(item.path, item.exact)
-                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]'
-                            : 'border-transparent bg-white/55 text-slate-600 hover:border-white hover:bg-white hover:text-slate-900'
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)] lg:border-white/80 lg:bg-white lg:text-slate-900 lg:shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
+                            : 'border-transparent bg-white/55 text-slate-600 hover:border-white hover:bg-white hover:text-slate-900 lg:bg-transparent lg:hover:border-white/70 lg:hover:bg-white/70'
                         }`}
                       >
                         <span
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] transition-all ${
                             isActive(item.path, item.exact)
-                              ? 'bg-white/12 text-white'
+                              ? 'bg-white/12 text-white lg:bg-slate-900 lg:text-white'
                               : 'bg-[#f3ede2] text-slate-700 group-hover:bg-[#ede6d7]'
                           }`}
                         >
@@ -184,11 +181,11 @@ const DashboardLayout: React.FC = () => {
                         </span>
                         <div className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{item.label}</span>
-                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-white/65' : 'text-slate-400'}`}>
+                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-white/65 lg:text-slate-500' : 'text-slate-400'}`}>
                             {group.title === 'Overview' ? 'Your core workspace' : group.title === 'Plan' ? 'Explore options and shortlist' : 'Move toward submission'}
                           </span>
                         </div>
-                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-white/70' : 'text-slate-300 group-hover:text-slate-500'}`} />
+                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-white/70 lg:text-slate-400' : 'text-slate-300 group-hover:text-slate-500'}`} />
                       </Link>
                     </li>
                   ))}
@@ -197,26 +194,7 @@ const DashboardLayout: React.FC = () => {
             ))}
           </nav>
 
-          <div className="shrink-0 space-y-2 border-t border-white/40 p-4">
-            <div className="rounded-[1.4rem] border border-white/70 bg-white/75 px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-              <div className="flex items-center gap-2 text-slate-700">
-                <Compass className="h-4 w-4 text-teal-600" />
-                <span className="text-sm font-medium">Current focus</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-500">
-                {completion < 100
-                  ? 'Complete your profile for better recommendations.'
-                  : 'Review your latest matches and next application steps.'}
-              </p>
-            </div>
-            <Link
-              to="/dashboard/match"
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-slate-600 transition-all hover:bg-white/70 hover:text-slate-900"
-            >
-              <Sparkles className="h-5 w-5" />
-              Explore Matches
-              <ArrowUpRight className="ml-auto h-4 w-4" />
-            </Link>
+          <div className="shrink-0 border-t border-white/40 p-4">
             <button
               onClick={handleSignOut}
               className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-slate-600 transition-all hover:bg-red-50/90 hover:text-red-600"
