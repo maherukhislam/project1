@@ -1,4 +1,4 @@
-import { getSupabase } from './_supabase.js';
+import { getSupabase, hasSupabaseServiceRoleKey } from './_supabase.js';
 
 const DEFAULT_BOOTSTRAP_ADMIN_EMAIL = 'maherukhislam2007@gmail.com';
 
@@ -6,6 +6,24 @@ const buildDefaultName = (user) => {
   if (user.user_metadata?.name) return user.user_metadata.name;
   if (user.email) return user.email.split('@')[0];
   return 'New User';
+};
+
+const isRecursiveProfilesPolicyError = (error) =>
+  Boolean(error?.message?.includes('infinite recursion detected in policy for relation "profiles"'));
+
+const buildFallbackProfile = (user, isBootstrapCandidate) => {
+  const role = user.user_metadata?.role || (isBootstrapCandidate ? 'admin' : 'student');
+
+  return {
+    id: 0,
+    user_id: user.id,
+    email: user.email,
+    name: buildDefaultName(user),
+    role,
+    profile_completion: role === 'admin' ? 100 : 10,
+    created_at: new Date().toISOString(),
+    fallback: true
+  };
 };
 
 export async function onRequest(context) {
@@ -37,8 +55,8 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'GET') {
-      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
+      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
 
       if (!error && data) {
         if (isBootstrapCandidate && data.role !== 'admin') {
@@ -52,6 +70,19 @@ export async function onRequest(context) {
           return new Response(JSON.stringify(updated), { headers });
         }
         return new Response(JSON.stringify(data), { headers });
+      }
+
+      if (isRecursiveProfilesPolicyError(error)) {
+        const fallbackProfile = buildFallbackProfile(user, isBootstrapCandidate);
+        const details = hasSupabaseServiceRoleKey(env)
+          ? 'The profiles table is rejecting its own RLS policy. Apply supabase/rls_profiles.sql to replace the recursive policy.'
+          : 'The server is querying Supabase without a service-role key, so recursive RLS on public.profiles is still being enforced. Set SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY / SUPABASE_SECRET_KEY) in Pages and apply supabase/rls_profiles.sql.';
+
+        return new Response(JSON.stringify({
+          ...fallbackProfile,
+          warning: 'Profile loaded from auth metadata fallback because the profiles RLS policy is recursive.',
+          details
+        }), { headers });
       }
 
       if (error && error.code !== 'PGRST116') {
@@ -74,6 +105,14 @@ export async function onRequest(context) {
         .insert(payload)
         .select('*')
         .single();
+
+      if (isRecursiveProfilesPolicyError(createError)) {
+        return new Response(JSON.stringify({
+          ...buildFallbackProfile(user, isBootstrapCandidate),
+          warning: 'Profile could not be persisted because the profiles RLS policy is recursive.'
+        }), { headers });
+      }
+
       if (createError) throw createError;
 
       return new Response(JSON.stringify(created), { headers });
