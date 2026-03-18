@@ -115,9 +115,6 @@ const DashboardLayout: React.FC = () => {
                   <span className="block text-xs uppercase tracking-[0.22em] text-slate-500">Student Atlas</span>
                 </div>
               </Link>
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                A focused workspace for planning offers, documents, and next application moves.
-              </p>
             </div>
           </div>
 
