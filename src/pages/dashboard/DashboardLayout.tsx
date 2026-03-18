@@ -105,7 +105,7 @@ const DashboardLayout: React.FC = () => {
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="hidden border-b border-white/40 p-6 lg:block">
             <div className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(251,146,60,0.16),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.92),rgba(248,244,236,0.88))] p-5 shadow-[0_24px_55px_rgba(15,23,42,0.08)]">
               <Link to="/" className="flex items-center gap-2">
@@ -147,7 +147,7 @@ const DashboardLayout: React.FC = () => {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-8 overflow-y-auto px-5 py-6">
+          <nav className="min-h-0 flex-1 space-y-8 overflow-y-auto px-5 py-6">
             {navGroups.map((group) => (
               <div
                 key={group.title}
@@ -184,7 +184,7 @@ const DashboardLayout: React.FC = () => {
             ))}
           </nav>
 
-          <div className="space-y-2 border-t border-white/40 p-4">
+          <div className="shrink-0 space-y-2 border-t border-white/40 p-4">
             <div className="rounded-[1.4rem] border border-white/70 bg-white/75 px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
               <div className="flex items-center gap-2 text-slate-700">
                 <Compass className="h-4 w-4 text-teal-600" />

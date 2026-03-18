@@ -103,7 +103,7 @@ const AdminLayout: React.FC = () => {
         lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex flex-col h-full">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="p-6 border-b border-slate-700 hidden lg:block">
             <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-indigo-500/10 p-4">
               <Link to="/" className="flex items-center gap-2 mb-3">
@@ -133,7 +133,7 @@ const AdminLayout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 overflow-y-auto space-y-6">
+          <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
             {navGroups.map((group) => (
               <div key={group.title}>
                 <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -162,7 +162,7 @@ const AdminLayout: React.FC = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-700 space-y-2">
+          <div className="shrink-0 space-y-2 border-t border-slate-700 p-4">
             <Link
               to="/"
               className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-700/50 hover:text-white transition-all"
