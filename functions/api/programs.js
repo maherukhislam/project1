@@ -21,6 +21,7 @@ export async function onRequest(context) {
       const university_id = url.searchParams.get('university_id');
       const degree_level = url.searchParams.get('degree_level');
       const subject = url.searchParams.get('subject');
+      const includeExpired = url.searchParams.get('include_expired') === '1';
       
       let query = supabase.from('programs').select('*, universities(name, country, logo_url)');
       
@@ -30,7 +31,15 @@ export async function onRequest(context) {
       
       const { data, error } = await query.order('name');
       if (error) throw error;
-      return new Response(JSON.stringify(data), { headers });
+      const now = Date.now();
+      const filtered = includeExpired
+        ? data || []
+        : (data || []).filter((program) => {
+            if (program.is_active === false) return false;
+            if (!program.application_deadline) return true;
+            return new Date(program.application_deadline).getTime() >= now;
+          });
+      return new Response(JSON.stringify(filtered), { headers });
     }
 
     const authHeader = request.headers.get('Authorization');

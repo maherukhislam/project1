@@ -40,6 +40,15 @@ create table if not exists public.profiles (
   role text not null default 'student' check (role in ('student', 'admin', 'counselor', 'editor')),
   profile_completion integer not null default 0 check (profile_completion between 0 and 100),
   profile_status text not null default 'incomplete' check (profile_status in ('complete', 'incomplete')),
+  lead_score integer not null default 0,
+  lead_temperature text not null default 'Cold Lead' check (lead_temperature in ('Hot Lead', 'Warm Lead', 'Cold Lead')),
+  duplicate_flags jsonb not null default '[]'::jsonb,
+  fraud_flags jsonb not null default '[]'::jsonb,
+  visa_risk_score integer not null default 0,
+  visa_risk_level text not null default 'Medium risk' check (visa_risk_level in ('Low risk', 'Medium risk', 'High risk')),
+  counselor_specializations jsonb not null default '[]'::jsonb,
+  counselor_capacity integer not null default 30,
+  assigned_counselor_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -96,6 +105,11 @@ create table if not exists public.programs (
   english_test_required boolean,
   intake_periods text,
   scholarship_available boolean not null default false,
+  application_deadline timestamptz,
+  scholarship_deadline timestamptz,
+  seats_total integer,
+  seats_filled integer not null default 0,
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -137,6 +151,13 @@ create table if not exists public.applications (
   intake text,
   notes text,
   eligibility_snapshot jsonb default '{}'::jsonb,
+  risk_snapshot jsonb default '{}'::jsonb,
+  timeline jsonb not null default '[]'::jsonb,
+  deadline_snapshot jsonb default '{}'::jsonb,
+  next_steps jsonb not null default '[]'::jsonb,
+  offer_type text check (offer_type in ('conditional', 'unconditional')),
+  offer_received_at timestamptz,
+  offer_letter_file_url text,
   admin_override boolean not null default false,
   override_reason text,
   status text not null default 'draft' check (
@@ -178,6 +199,15 @@ alter table public.profiles
   add column if not exists medium_of_instruction text,
   add column if not exists last_education_year integer,
   add column if not exists profile_status text not null default 'incomplete',
+  add column if not exists lead_score integer not null default 0,
+  add column if not exists lead_temperature text not null default 'Cold Lead',
+  add column if not exists duplicate_flags jsonb not null default '[]'::jsonb,
+  add column if not exists fraud_flags jsonb not null default '[]'::jsonb,
+  add column if not exists visa_risk_score integer not null default 0,
+  add column if not exists visa_risk_level text not null default 'Medium risk',
+  add column if not exists counselor_specializations jsonb not null default '[]'::jsonb,
+  add column if not exists counselor_capacity integer not null default 30,
+  add column if not exists assigned_counselor_id uuid references auth.users(id) on delete set null,
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
 
@@ -202,6 +232,11 @@ alter table public.programs
   add column if not exists subject_area text,
   add column if not exists related_subjects jsonb default '[]'::jsonb,
   add column if not exists english_test_required boolean,
+  add column if not exists application_deadline timestamptz,
+  add column if not exists scholarship_deadline timestamptz,
+  add column if not exists seats_total integer,
+  add column if not exists seats_filled integer not null default 0,
+  add column if not exists is_active boolean not null default true,
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
 
@@ -215,6 +250,13 @@ alter table public.blog_posts
 
 alter table public.applications
   add column if not exists eligibility_snapshot jsonb default '{}'::jsonb,
+  add column if not exists risk_snapshot jsonb default '{}'::jsonb,
+  add column if not exists timeline jsonb not null default '[]'::jsonb,
+  add column if not exists deadline_snapshot jsonb default '{}'::jsonb,
+  add column if not exists next_steps jsonb not null default '[]'::jsonb,
+  add column if not exists offer_type text,
+  add column if not exists offer_received_at timestamptz,
+  add column if not exists offer_letter_file_url text,
   add column if not exists admin_override boolean not null default false,
   add column if not exists override_reason text,
   add column if not exists created_at timestamptz not null default now(),
@@ -229,15 +271,22 @@ alter table public.documents
 
 create index if not exists idx_profiles_user_id on public.profiles(user_id);
 create index if not exists idx_profiles_role on public.profiles(role);
+create index if not exists idx_profiles_email on public.profiles(lower(email));
+create index if not exists idx_profiles_phone on public.profiles(phone);
+create index if not exists idx_profiles_assigned_counselor on public.profiles(assigned_counselor_id);
 create index if not exists idx_universities_country on public.universities(country);
 create index if not exists idx_programs_university_id on public.programs(university_id);
 create index if not exists idx_programs_degree_level on public.programs(degree_level);
+create index if not exists idx_programs_application_deadline on public.programs(application_deadline);
+create index if not exists idx_programs_is_active on public.programs(is_active);
 create index if not exists idx_scholarships_university_id on public.scholarships(university_id);
 create index if not exists idx_blog_posts_slug on public.blog_posts(slug);
 create index if not exists idx_blog_posts_published on public.blog_posts(published);
 create index if not exists idx_applications_user_id on public.applications(user_id);
 create index if not exists idx_applications_program_id on public.applications(program_id);
 create index if not exists idx_applications_status on public.applications(status);
+create unique index if not exists idx_applications_unique_user_program on public.applications(user_id, program_id);
+create index if not exists idx_applications_counselor_id on public.applications(counselor_id);
 create index if not exists idx_documents_user_id on public.documents(user_id);
 create index if not exists idx_documents_status on public.documents(status);
 create index if not exists idx_audit_logs_user_id on public.audit_logs(user_id);

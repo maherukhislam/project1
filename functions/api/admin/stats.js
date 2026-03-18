@@ -1,9 +1,14 @@
 import { getSupabase } from '../_supabase.js';
 
+function percentage(numerator, denominator) {
+  if (!denominator) return 0;
+  return Number(((numerator / denominator) * 100).toFixed(1));
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -36,27 +41,79 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers });
     }
 
-    const [students, universities, programs, scholarships, applications] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'student'),
+    const [students, universities, programs, scholarships, applications, counselors] = await Promise.all([
+      supabase.from('profiles').select('id, preferred_country, lead_temperature, lead_score', { count: 'exact' }).eq('role', 'student'),
       supabase.from('universities').select('id', { count: 'exact' }),
-      supabase.from('programs').select('id', { count: 'exact' }),
+      supabase.from('programs').select('id, is_active, application_deadline'),
       supabase.from('scholarships').select('id', { count: 'exact' }),
-      supabase.from('applications').select('id, status')
+      supabase.from('applications').select('id, status, counselor_id, programs(universities(country, name))'),
+      supabase.from('profiles').select('user_id, name').eq('role', 'counselor')
     ]);
 
     const appsByStatus = {};
-    applications.data?.forEach(app => {
+    const byCountry = {};
+    const byUniversity = {};
+    const byCounselor = {};
+    let offerCount = 0;
+    let visaCount = 0;
+
+    (applications.data || []).forEach((app) => {
       appsByStatus[app.status] = (appsByStatus[app.status] || 0) + 1;
+      const country = app.programs?.universities?.country;
+      const university = app.programs?.universities?.name;
+      if (country) byCountry[country] = (byCountry[country] || 0) + 1;
+      if (university) byUniversity[university] = (byUniversity[university] || 0) + 1;
+      if (app.counselor_id) byCounselor[app.counselor_id] = (byCounselor[app.counselor_id] || 0) + 1;
+      if (app.status === 'accepted') offerCount += 1;
+      if (app.status === 'visa_processing') visaCount += 1;
     });
 
-    return new Response(JSON.stringify({
-      totalStudents: students.count || 0,
-      totalUniversities: universities.count || 0,
-      totalPrograms: programs.count || 0,
-      totalScholarships: scholarships.count || 0,
-      totalApplications: applications.data?.length || 0,
-      applicationsByStatus: appsByStatus
-    }), { headers });
+    const counselorDirectory = new Map((counselors.data || []).map((item) => [item.user_id, item.name]));
+    const counselorStats = Object.entries(byCounselor).map(([id, count]) => ({
+      counselor_id: id,
+      counselor_name: counselorDirectory.get(id) || 'Unassigned counselor',
+      application_count: count
+    }));
+
+    const activePrograms = (programs.data || []).filter((program) => {
+      if (program.is_active === false) return false;
+      if (!program.application_deadline) return true;
+      return new Date(program.application_deadline).getTime() >= Date.now();
+    }).length;
+    const expiringPrograms = (programs.data || []).filter((program) => {
+      if (!program.application_deadline) return false;
+      const diff = new Date(program.application_deadline).getTime() - Date.now();
+      return diff >= 0 && diff <= 14 * 24 * 60 * 60 * 1000;
+    }).length;
+
+    const hotLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Hot Lead').length;
+    const warmLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Warm Lead').length;
+
+    return new Response(
+      JSON.stringify({
+        totalStudents: students.count || 0,
+        totalUniversities: universities.count || 0,
+        totalPrograms: activePrograms,
+        totalScholarships: scholarships.count || 0,
+        totalApplications: applications.data?.length || 0,
+        applicationsByStatus: appsByStatus,
+        hotLeadCount,
+        warmLeadCount,
+        conversion: {
+          leads_to_applications: percentage(applications.data?.length || 0, students.count || 0),
+          applications_to_offers: percentage(offerCount, applications.data?.length || 0),
+          offers_to_visas: percentage(visaCount, offerCount)
+        },
+        topCountries: Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
+        topUniversities: Object.entries(byUniversity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
+        counselorPerformance: counselorStats.sort((a, b) => b.application_count - a.application_count),
+        deadlineAlerts: {
+          expiringPrograms,
+          activePrograms
+        }
+      }),
+      { headers }
+    );
   } catch (err) {
     console.error('Admin stats error:', err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });

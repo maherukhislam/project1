@@ -1,5 +1,18 @@
 import { getSupabase } from './_supabase.js';
-import { computeProfileState, deriveCountryRules, evaluateProgram, getDocumentRequirements, logAuditEvent } from './_matching.js';
+import {
+  assignCounselor,
+  buildDeadlineSnapshot,
+  computeLeadScore,
+  computeProfileState,
+  computeVisaRisk,
+  deriveCountryRules,
+  determineNextSteps,
+  evaluateProgram,
+  getDocumentRequirements,
+  logAuditEvent,
+  suggestAlternatives,
+  upsertTimelineEvent
+} from './_matching.js';
 
 function mergeProfiles(applications, profiles) {
   const profileByUserId = new Map(
@@ -12,10 +25,43 @@ function mergeProfiles(applications, profiles) {
   }));
 }
 
+function buildStatusTimeline(application, userId) {
+  let timeline = upsertTimelineEvent(application.timeline, {
+    stage: 'created',
+    label: 'Created',
+    actor_user_id: userId,
+    at: application.created_at
+  });
+
+  if (application.status === 'submitted') {
+    timeline = upsertTimelineEvent(timeline, { stage: 'submitted', label: 'Submitted', actor_user_id: userId });
+  }
+  if (application.status === 'under_review') {
+    timeline = upsertTimelineEvent(timeline, { stage: 'review', label: 'Under Review', actor_user_id: userId });
+  }
+  if (application.status === 'accepted' || application.offer_received_at) {
+    timeline = upsertTimelineEvent(timeline, {
+      stage: 'offer',
+      label: 'Offer Received',
+      actor_user_id: userId,
+      at: application.offer_received_at || undefined,
+      meta: { offer_type: application.offer_type || null }
+    });
+  }
+  if (application.status === 'visa_processing') {
+    timeline = upsertTimelineEvent(timeline, { stage: 'visa', label: 'Visa Processing', actor_user_id: userId });
+  }
+  if (application.status === 'rejected') {
+    timeline = upsertTimelineEvent(timeline, { stage: 'decision', label: 'Rejected', actor_user_id: userId });
+  }
+
+  return timeline;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -59,36 +105,35 @@ export async function onRequest(context) {
       }
 
       const selectFields = minimal
-        ? `id, user_id, status, created_at, intake, notes, program_id, programs(id, name, degree_level, universities(id, name, country, logo_url))`
-        : `
-          *,
-          programs(id, name, degree_level, universities(id, name, country, logo_url))
-        `;
+        ? 'id, user_id, counselor_id, status, created_at, intake, notes, program_id, offer_type, offer_received_at, next_steps, deadline_snapshot, timeline, programs(id, name, degree_level, universities(id, name, country, logo_url))'
+        : '*, programs(*, universities(id, name, country, logo_url))';
 
       let query = supabase.from('applications').select(selectFields);
-
-      if (!isAdmin) {
-        query = query.eq('user_id', user.id);
-      }
-
+      if (!isAdmin) query = query.eq('user_id', user.id);
       if (status) query = query.eq('status', status);
       if (limit > 0) query = query.limit(limit);
 
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
 
-      if (!isAdmin || !data?.length) {
-        return new Response(JSON.stringify(data || []), { headers });
+      const normalized = (data || []).map((application) => ({
+        ...application,
+        deadline_snapshot: application.deadline_snapshot || buildDeadlineSnapshot(application.programs || {}),
+        timeline: buildStatusTimeline(application, application.user_id)
+      }));
+
+      if (!isAdmin || !normalized.length) {
+        return new Response(JSON.stringify(normalized), { headers });
       }
 
-      const userIds = [...new Set(data.map((application) => application.user_id).filter(Boolean))];
+      const userIds = [...new Set(normalized.map((application) => application.user_id).filter(Boolean))];
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, name, email')
         .in('user_id', userIds);
 
       if (profilesError) throw profilesError;
-      return new Response(JSON.stringify(mergeProfiles(data, profiles)), { headers });
+      return new Response(JSON.stringify(mergeProfiles(normalized, profiles)), { headers });
     }
 
     const body = await request.json();
@@ -97,6 +142,21 @@ export async function onRequest(context) {
       const { program_id, intake, notes, admin_override = false, override_reason = '' } = body;
       const { data: fullProfile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
       const profileState = computeProfileState(fullProfile || profile || {});
+
+      const { data: existingApplication, error: existingError } = await supabase
+        .from('applications')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('program_id', program_id)
+        .maybeSingle();
+      if (existingError) throw existingError;
+      if (existingApplication) {
+        return new Response(
+          JSON.stringify({ error: 'You already have an application for this program.', existing_application: existingApplication }),
+          { status: 409, headers }
+        );
+      }
+
       const { data: program, error: programError } = await supabase
         .from('programs')
         .select('*, universities(id, name, country, logo_url)')
@@ -118,7 +178,8 @@ export async function onRequest(context) {
       const applicationBlocked =
         profileState.profile_status !== 'complete' ||
         !programEvaluation.eligible_for_application ||
-        missingDocuments.length > 0;
+        missingDocuments.length > 0 ||
+        programEvaluation.deadline_snapshot?.expired;
 
       if (applicationBlocked && !(isAdmin && admin_override)) {
         return new Response(
@@ -137,17 +198,49 @@ export async function onRequest(context) {
         );
       }
 
+      const counselorAssignment = await assignCounselor(supabase, {
+        preferredCountry: program.universities?.country,
+        preferredSubject: profileState.preferred_subject
+      });
+      const lead = computeLeadScore(profileState);
+      const visaRisk = computeVisaRisk(profileState, countryRules);
+      const deadlineSnapshot = buildDeadlineSnapshot(program);
+      let timeline = upsertTimelineEvent([], {
+        stage: 'created',
+        label: 'Created',
+        actor_user_id: user.id,
+        meta: { match_score: programEvaluation.match_score }
+      });
+      if (uploadedDocs.size > 0) {
+        timeline = upsertTimelineEvent(timeline, {
+          stage: 'documents',
+          label: 'Documents Uploaded',
+          actor_user_id: user.id,
+          meta: { uploaded_count: uploadedDocs.size }
+        });
+      }
+
+      const nextSteps = determineNextSteps({
+        status: 'draft',
+        visaRiskLevel: visaRisk.level,
+        missingDocuments,
+        deadlineSnapshot
+      });
+
       const { data, error } = await supabase
         .from('applications')
         .insert({
           user_id: user.id,
           program_id,
+          counselor_id: counselorAssignment?.counselor?.user_id || null,
           intake,
           notes,
           status: 'draft',
           eligibility_snapshot: {
             profile_completion: profileState.profile_completion,
             profile_status: profileState.profile_status,
+            lead_score: lead.score,
+            lead_temperature: lead.temperature,
             program_evaluation: {
               match_score: programEvaluation.match_score,
               match_category: programEvaluation.match_category,
@@ -156,12 +249,33 @@ export async function onRequest(context) {
             },
             missing_documents: missingDocuments
           },
+          risk_snapshot: {
+            visa_risk_score: visaRisk.score,
+            visa_risk_level: visaRisk.level,
+            visa_risk_reasons: visaRisk.reasons,
+            financial_risk: programEvaluation.financial_risk
+          },
+          timeline,
+          deadline_snapshot: deadlineSnapshot,
+          next_steps: nextSteps,
           admin_override: Boolean(isAdmin && admin_override),
           override_reason: isAdmin && admin_override ? override_reason || 'Manual override' : null
         })
         .select()
         .single();
       if (error) throw error;
+
+      await supabase
+        .from('profiles')
+        .update({
+          assigned_counselor_id: counselorAssignment?.counselor?.user_id || fullProfile?.assigned_counselor_id || null,
+          lead_score: lead.score,
+          lead_temperature: lead.temperature,
+          visa_risk_score: visaRisk.score,
+          visa_risk_level: visaRisk.level
+        })
+        .eq('user_id', user.id);
+
       await logAuditEvent(supabase, {
         user_id: user.id,
         actor_user_id: user.id,
@@ -170,29 +284,114 @@ export async function onRequest(context) {
         entity_id: String(data.id),
         details: {
           program_id,
+          counselor_id: counselorAssignment?.counselor?.user_id || null,
           profile_status: profileState.profile_status,
           match_score: programEvaluation.match_score,
+          lead_score: lead.score,
+          visa_risk_level: visaRisk.level,
           missing_documents: missingDocuments
         }
       });
+
       return new Response(JSON.stringify(data), { status: 201, headers });
     }
 
     if (request.method === 'PUT') {
       const { id, ...updates } = body;
-      
-      if (!isAdmin && (updates.status || updates.counselor_id)) {
+      if (!isAdmin && (updates.status || updates.counselor_id || updates.offer_type || updates.offer_received_at)) {
         delete updates.status;
         delete updates.counselor_id;
+        delete updates.offer_type;
+        delete updates.offer_received_at;
+        delete updates.offer_letter_file_url;
       }
 
-      let updateQuery = supabase.from('applications').update(updates).eq('id', id);
-      if (!isAdmin) {
-        updateQuery = updateQuery.eq('user_id', user.id);
+      let existingQuery = supabase
+        .from('applications')
+        .select('*, programs(*, universities(id, name, country, logo_url))')
+        .eq('id', id);
+      if (!isAdmin) existingQuery = existingQuery.eq('user_id', user.id);
+
+      const { data: currentApplication, error: currentError } = await existingQuery.single();
+      if (currentError) throw currentError;
+
+      const { data: studentProfile } = await supabase.from('profiles').select('*').eq('user_id', currentApplication.user_id).maybeSingle();
+      const profileState = computeProfileState(studentProfile || {});
+      const visaRisk = computeVisaRisk(profileState, deriveCountryRules(currentApplication.programs?.universities?.country));
+      const deadlineSnapshot = buildDeadlineSnapshot(currentApplication.programs || {});
+      const { data: docs } = await supabase.from('documents').select('document_type, status').eq('user_id', currentApplication.user_id);
+      const requiredDocuments = getDocumentRequirements({ ...profileState, preferred_country: currentApplication.programs?.universities?.country });
+      const uploadedDocs = new Set((docs || []).filter((doc) => doc.status !== 'rejected').map((doc) => doc.document_type));
+      const missingDocuments = requiredDocuments.filter((docType) => !uploadedDocs.has(docType));
+
+      let timeline = currentApplication.timeline || [];
+      if (uploadedDocs.size > 0) {
+        timeline = upsertTimelineEvent(timeline, {
+          stage: 'documents',
+          label: 'Documents Uploaded',
+          actor_user_id: user.id,
+          meta: { uploaded_count: uploadedDocs.size }
+        });
       }
+
+      const nextStatus = updates.status || currentApplication.status;
+      const nextOfferType = updates.offer_type || currentApplication.offer_type;
+
+      if (nextStatus === 'submitted') {
+        timeline = upsertTimelineEvent(timeline, { stage: 'submitted', label: 'Submitted', actor_user_id: user.id });
+      }
+      if (nextStatus === 'under_review') {
+        timeline = upsertTimelineEvent(timeline, { stage: 'review', label: 'Under Review', actor_user_id: user.id });
+      }
+      if (nextStatus === 'accepted' || updates.offer_received_at || updates.offer_letter_file_url) {
+        timeline = upsertTimelineEvent(timeline, {
+          stage: 'offer',
+          label: 'Offer Received',
+          actor_user_id: user.id,
+          at: updates.offer_received_at || currentApplication.offer_received_at || undefined,
+          meta: { offer_type: nextOfferType || null }
+        });
+      }
+      if (nextStatus === 'visa_processing') {
+        timeline = upsertTimelineEvent(timeline, { stage: 'visa', label: 'Visa Processing', actor_user_id: user.id });
+      }
+      if (nextStatus === 'rejected') {
+        timeline = upsertTimelineEvent(timeline, { stage: 'decision', label: 'Rejected', actor_user_id: user.id });
+      }
+
+      let rejectionSuggestions = [];
+      if (nextStatus === 'rejected') {
+        rejectionSuggestions = await suggestAlternatives(supabase, profileState, currentApplication.programs, 3);
+      }
+
+      const nextSteps = determineNextSteps({
+        status: nextStatus,
+        offerType: nextOfferType,
+        visaRiskLevel: visaRisk.level,
+        missingDocuments,
+        deadlineSnapshot,
+        rejectionSuggestions
+      });
+
+      const payload = {
+        ...updates,
+        timeline,
+        deadline_snapshot: deadlineSnapshot,
+        next_steps: nextSteps,
+        risk_snapshot: {
+          ...(currentApplication.risk_snapshot || {}),
+          visa_risk_score: visaRisk.score,
+          visa_risk_level: visaRisk.level,
+          visa_risk_reasons: visaRisk.reasons
+        }
+      };
+
+      let updateQuery = supabase.from('applications').update(payload).eq('id', id);
+      if (!isAdmin) updateQuery = updateQuery.eq('user_id', user.id);
 
       const { data, error } = await updateQuery.select().single();
       if (error) throw error;
+
       await logAuditEvent(supabase, {
         user_id: data.user_id,
         actor_user_id: user.id,

@@ -38,135 +38,32 @@ const EDUCATION_TO_STUDY_LEVEL = {
 };
 
 const DEFAULT_COUNTRY_RULES = {
-  'United States': {
-    min_gpa_required: 2.5,
-    gpa_tolerance: 0.2,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 10,
-    gap_risk_threshold: 5,
-    budget_tolerance_pct: 0.15
-  },
-  'United Kingdom': {
-    min_gpa_required: 2.7,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 8,
-    gap_risk_threshold: 4,
-    budget_tolerance_pct: 0.12
-  },
-  Canada: {
-    min_gpa_required: 2.7,
-    gpa_tolerance: 0.1,
-    english_test_required: true,
-    english_medium_waiver_allowed: false,
-    max_gap_years: 7,
-    gap_risk_threshold: 4,
-    budget_tolerance_pct: 0.12
-  },
-  Australia: {
-    min_gpa_required: 2.6,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 8,
-    gap_risk_threshold: 4,
-    budget_tolerance_pct: 0.12
-  },
-  Germany: {
-    min_gpa_required: 2.8,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 6,
-    gap_risk_threshold: 3,
-    budget_tolerance_pct: 0.1
-  },
-  Netherlands: {
-    min_gpa_required: 2.8,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 6,
-    gap_risk_threshold: 3,
-    budget_tolerance_pct: 0.1
-  },
-  France: {
-    min_gpa_required: 2.5,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 6,
-    gap_risk_threshold: 3,
-    budget_tolerance_pct: 0.1
-  },
-  Ireland: {
-    min_gpa_required: 2.6,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 7,
-    gap_risk_threshold: 4,
-    budget_tolerance_pct: 0.12
-  },
-  'New Zealand': {
-    min_gpa_required: 2.5,
-    gpa_tolerance: 0.15,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 8,
-    gap_risk_threshold: 4,
-    budget_tolerance_pct: 0.12
-  },
-  Singapore: {
-    min_gpa_required: 3.0,
-    gpa_tolerance: 0.1,
-    english_test_required: true,
-    english_medium_waiver_allowed: true,
-    max_gap_years: 5,
-    gap_risk_threshold: 3,
-    budget_tolerance_pct: 0.1
-  }
+  'United States': { min_gpa_required: 2.5, gpa_tolerance: 0.2, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 10, gap_risk_threshold: 5, budget_tolerance_pct: 0.15 },
+  'United Kingdom': { min_gpa_required: 2.7, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 8, gap_risk_threshold: 4, budget_tolerance_pct: 0.12 },
+  Canada: { min_gpa_required: 2.7, gpa_tolerance: 0.1, english_test_required: true, english_medium_waiver_allowed: false, max_gap_years: 7, gap_risk_threshold: 4, budget_tolerance_pct: 0.12 },
+  Australia: { min_gpa_required: 2.6, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 8, gap_risk_threshold: 4, budget_tolerance_pct: 0.12 },
+  Germany: { min_gpa_required: 2.8, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 6, gap_risk_threshold: 3, budget_tolerance_pct: 0.1 },
+  Netherlands: { min_gpa_required: 2.8, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 6, gap_risk_threshold: 3, budget_tolerance_pct: 0.1 },
+  France: { min_gpa_required: 2.5, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 6, gap_risk_threshold: 3, budget_tolerance_pct: 0.1 },
+  Ireland: { min_gpa_required: 2.6, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 7, gap_risk_threshold: 4, budget_tolerance_pct: 0.12 },
+  'New Zealand': { min_gpa_required: 2.5, gpa_tolerance: 0.15, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 8, gap_risk_threshold: 4, budget_tolerance_pct: 0.12 },
+  Singapore: { min_gpa_required: 3.0, gpa_tolerance: 0.1, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 5, gap_risk_threshold: 3, budget_tolerance_pct: 0.1 }
 };
 
 const DOCUMENT_BASE = ['passport', 'academic_certificate', 'transcript', 'cv'];
-
-const DOCUMENT_BY_LEVEL = {
-  Bachelor: ['sop'],
-  Master: ['sop', 'recommendation'],
-  PhD: ['sop', 'recommendation', 'research_proposal']
-};
-
-const DOCUMENT_BY_COUNTRY = {
-  Canada: ['financial_statement'],
-  Australia: ['financial_statement'],
-  Germany: ['aps_certificate'],
-  'United States': ['financial_statement'],
-  'United Kingdom': ['financial_statement']
-};
-
+const DOCUMENT_BY_LEVEL = { Bachelor: ['sop'], Master: ['sop', 'recommendation'], PhD: ['sop', 'recommendation', 'research_proposal'] };
+const DOCUMENT_BY_COUNTRY = { Canada: ['financial_statement'], Australia: ['financial_statement'], Germany: ['aps_certificate'], 'United States': ['financial_statement'], 'United Kingdom': ['financial_statement'] };
 const FILE_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-const ENGLISH_MAX = {
-  IELTS: 9,
-  TOEFL: 120,
-  Duolingo: 160,
-  PTE: 90
-};
-
+const ENGLISH_MAX = { IELTS: 9, TOEFL: 120, Duolingo: 160, PTE: 90 };
 const INTAKE_PRIORITY = ['Spring', 'Summer', 'Fall', 'Winter'];
 
 const readNumber = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
-
-const titleCase = (value) => {
-  if (!value) return value;
-  return String(value)
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
+const toDate = (value) => (value ? new Date(value) : null);
+const daysUntil = (value) => {
+  const date = toDate(value);
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return Math.ceil((date.getTime() - Date.now()) / 86400000);
 };
 
 export function normalizeScalarList(value) {
@@ -257,6 +154,19 @@ function englishThresholdForType(ieltsEquivalent, testType) {
   }
 }
 
+export function calculateGapYears(profile = {}) {
+  const lastEducationYear = readNumber(profile.last_education_year);
+  if (!lastEducationYear) return null;
+  return Math.max(CURRENT_YEAR - lastEducationYear, 0);
+}
+
+export function shouldRequireEnglishTest(profile = {}, countryRules = {}) {
+  const medium = profile.medium_of_instruction;
+  if (medium === 'English Medium' && countryRules.english_medium_waiver_allowed) return false;
+  if (medium === 'Bangla Medium') return true;
+  return Boolean(countryRules.english_test_required);
+}
+
 export function getDocumentRequirements(profile = {}) {
   const studyLevel = profile.study_level || 'Bachelor';
   const country = profile.preferred_country;
@@ -270,26 +180,8 @@ export function getDocumentRequirements(profile = {}) {
   return [...requirements];
 }
 
-export function calculateGapYears(profile = {}) {
-  const lastEducationYear = readNumber(profile.last_education_year);
-  if (!lastEducationYear) return null;
-  return Math.max(CURRENT_YEAR - lastEducationYear, 0);
-}
-
-export function shouldRequireEnglishTest(profile = {}, countryRules = {}) {
-  const medium = profile.medium_of_instruction;
-  if (medium === 'English Medium' && countryRules.english_medium_waiver_allowed) {
-    return false;
-  }
-  if (medium === 'Bangla Medium') {
-    return true;
-  }
-  return Boolean(countryRules.english_test_required);
-}
-
 export function validateProfileInput(profile = {}) {
   const errors = {};
-
   const budgetMin = readNumber(profile.budget_min);
   const budgetMax = readNumber(profile.budget_max);
   const gpa = readNumber(profile.gpa);
@@ -300,36 +192,20 @@ export function validateProfileInput(profile = {}) {
 
   PROFILE_REQUIRED_FIELDS.forEach((field) => {
     const value = profile[field];
-    if (value === null || value === undefined || value === '') {
-      errors[field] = 'This field is required.';
-    }
+    if (value === null || value === undefined || value === '') errors[field] = 'This field is required.';
   });
 
   if (gpa !== null && gpaScale !== null) {
-    if (gpa < 0 || gpa > gpaScale) {
-      errors.gpa = `GPA must be between 0 and ${gpaScale}.`;
-    }
-    if (gpaScale <= 0 || gpaScale > 10) {
-      errors.gpa_scale = 'GPA scale must be between 0 and 10.';
-    }
+    if (gpa < 0 || gpa > gpaScale) errors.gpa = `GPA must be between 0 and ${gpaScale}.`;
+    if (gpaScale <= 0 || gpaScale > 10) errors.gpa_scale = 'GPA scale must be between 0 and 10.';
   }
 
-  if (budgetMin !== null && (budgetMin < 0 || budgetMin > 1000000)) {
-    errors.budget_min = 'Budget min must be between 0 and 1,000,000.';
-  }
-  if (budgetMax !== null && (budgetMax < 0 || budgetMax > 1000000)) {
-    errors.budget_max = 'Budget max must be between 0 and 1,000,000.';
-  }
-  if (budgetMin !== null && budgetMax !== null && budgetMin > budgetMax) {
-    errors.budget_max = 'Budget max must be greater than or equal to budget min.';
-  }
+  if (budgetMin !== null && (budgetMin < 0 || budgetMin > 1000000)) errors.budget_min = 'Budget min must be between 0 and 1,000,000.';
+  if (budgetMax !== null && (budgetMax < 0 || budgetMax > 1000000)) errors.budget_max = 'Budget max must be between 0 and 1,000,000.';
+  if (budgetMin !== null && budgetMax !== null && budgetMin > budgetMax) errors.budget_max = 'Budget max must be greater than or equal to budget min.';
 
-  if (testType && englishScore === null) {
-    errors.english_score = 'English score is required for the selected test.';
-  }
-  if (!testType && englishScore !== null) {
-    errors.english_test_type = 'English test type is required when a score is provided.';
-  }
+  if (testType && englishScore === null) errors.english_score = 'English score is required for the selected test.';
+  if (!testType && englishScore !== null) errors.english_test_type = 'English test type is required when a score is provided.';
 
   const englishMax = ENGLISH_MAX[testType];
   if (englishMax && englishScore !== null && (englishScore < 0 || englishScore > englishMax)) {
@@ -348,15 +224,24 @@ export function validateProfileInput(profile = {}) {
   return errors;
 }
 
+function getBudgetRealism(profile = {}, profileState = null) {
+  const normalizedGpa = profileState?.normalized_gpa ?? normalizeGpa(profile);
+  const budgetMax = readNumber(profile.budget_max);
+  if (budgetMax === null) return { score: 0, category: 'unknown', reason: 'Budget missing' };
+  if (budgetMax >= 25000) return { score: 20, category: 'strong', reason: 'Budget supports most mainstream destinations' };
+  if (budgetMax >= 15000) return { score: 14, category: 'realistic', reason: 'Budget supports selective but realistic options' };
+  if (budgetMax >= 9000 && normalizedGpa !== null && normalizedGpa >= 3.2) {
+    return { score: 9, category: 'scholarship_reliant', reason: 'Budget may work with scholarships or cheaper countries' };
+  }
+  return { score: 4, category: 'risky', reason: 'Budget is financially tight for common pathways' };
+}
+
 export function computeProfileState(profile = {}) {
   const countryRules = deriveCountryRules(profile.preferred_country);
   const validation_errors = validateProfileInput(profile);
   const englishTestRequired = shouldRequireEnglishTest(profile, countryRules);
-
   const requiredFields = [...PROFILE_REQUIRED_FIELDS];
-  if (englishTestRequired) {
-    requiredFields.push('english_test_type', 'english_score');
-  }
+  if (englishTestRequired) requiredFields.push('english_test_type', 'english_score');
 
   const validRequiredFields = requiredFields.filter((field) => {
     const value = profile[field];
@@ -370,12 +255,8 @@ export function computeProfileState(profile = {}) {
   const blocking_reasons = [];
   const improvement_flags = [];
 
-  if (Object.keys(validation_errors).length) {
-    blocking_reasons.push('Profile has validation errors.');
-  }
-  if (completion_percentage < 100) {
-    blocking_reasons.push('Required profile fields are incomplete.');
-  }
+  if (Object.keys(validation_errors).length) blocking_reasons.push('Profile has validation errors.');
+  if (completion_percentage < 100) blocking_reasons.push('Required profile fields are incomplete.');
   if (englishTestRequired && (!profile.english_test_type || readNumber(profile.english_score) === null)) {
     blocking_reasons.push('English test details are required for your profile.');
   }
@@ -406,21 +287,141 @@ export function computeProfileState(profile = {}) {
       missing_required_fields: requiredFields.filter((field) => !validRequiredFields.includes(field))
     },
     document_requirements: getDocumentRequirements(profile),
+    budget_realism: getBudgetRealism(profile, { normalized_gpa }),
     blocking_reasons,
     improvement_flags
   };
+}
+
+export function computeLeadScore(profile = {}, applicationCount = 0) {
+  const state =
+    profile.profile_completion !== undefined && profile.normalized_gpa !== undefined
+      ? profile
+      : computeProfileState(profile);
+
+  let score = 0;
+  score += Math.round((state.profile_completion || 0) * 0.35);
+
+  const gpa = readNumber(state.normalized_gpa);
+  if (gpa !== null) {
+    if (gpa >= 3.5) score += 24;
+    else if (gpa >= 3.0) score += 18;
+    else if (gpa >= 2.6) score += 10;
+    else score += 4;
+  }
+
+  const english = readNumber(state.normalized_english);
+  if (!state.english_test_required) {
+    score += 14;
+  } else if (english !== null) {
+    if (english >= 7) score += 18;
+    else if (english >= 6) score += 12;
+    else if (english >= 5.5) score += 7;
+    else score += 2;
+  }
+
+  score += state.budget_realism?.score || 0;
+  if (applicationCount > 0) score += Math.min(applicationCount * 5, 15);
+
+  const finalScore = Math.max(0, Math.min(100, score));
+  const temperature = finalScore >= 75 ? 'Hot Lead' : finalScore >= 50 ? 'Warm Lead' : 'Cold Lead';
+
+  return {
+    score: finalScore,
+    temperature,
+    factors: {
+      profile_completion: state.profile_completion || 0,
+      budget_realism: state.budget_realism?.category || 'unknown',
+      normalized_gpa: state.normalized_gpa,
+      normalized_english: state.normalized_english,
+      application_count: applicationCount
+    }
+  };
+}
+
+export function computeVisaRisk(profile = {}, countryRules = null) {
+  const state =
+    profile.profile_completion !== undefined && profile.normalized_gpa !== undefined
+      ? profile
+      : computeProfileState(profile);
+  const rules = countryRules || deriveCountryRules(state.preferred_country);
+  let riskPoints = 0;
+  const reasons = [];
+
+  if ((state.budget_realism?.category || 'unknown') === 'risky') {
+    riskPoints += 35;
+    reasons.push('Budget is tight for tuition and living costs.');
+  } else if (state.budget_realism?.category === 'scholarship_reliant') {
+    riskPoints += 18;
+    reasons.push('Budget depends on scholarships or cheaper routes.');
+  }
+
+  if ((state.normalized_gpa ?? 4) < rules.min_gpa_required) {
+    riskPoints += 25;
+    reasons.push('Academic profile is below the common threshold.');
+  } else if ((state.normalized_gpa ?? 0) < rules.min_gpa_required + 0.2) {
+    riskPoints += 10;
+    reasons.push('Academic profile is borderline for the target market.');
+  }
+
+  if (state.gap_years !== null && state.gap_years > rules.max_gap_years) {
+    riskPoints += 25;
+    reasons.push('Study gap is above country tolerance.');
+  } else if (state.gap_years !== null && state.gap_years > rules.gap_risk_threshold) {
+    riskPoints += 12;
+    reasons.push('Study gap may require additional explanation.');
+  }
+
+  if (state.english_test_required && (state.normalized_english ?? 0) < 6) {
+    riskPoints += 15;
+    reasons.push('English score is weak for visa confidence.');
+  }
+
+  if ((state.profile_completion || 0) < 80) {
+    riskPoints += 12;
+    reasons.push('Profile is incomplete and documents may be weak.');
+  }
+
+  const score = Math.max(0, Math.min(100, riskPoints));
+  const level = score <= 25 ? 'Low risk' : score <= 55 ? 'Medium risk' : 'High risk';
+  return { score, level, reasons };
+}
+
+export function detectDuplicateSignals({ profile = {}, existingProfiles = [], recentProfiles = [] }) {
+  const duplicate_flags = [];
+  const fraud_flags = [];
+  const normalizedEmail = String(profile.email || '').trim().toLowerCase();
+  const normalizedPhone = String(profile.phone || '').trim();
+
+  if (normalizedEmail && existingProfiles.some((item) => String(item.email || '').trim().toLowerCase() === normalizedEmail)) {
+    duplicate_flags.push('Duplicate email');
+  }
+  if (normalizedPhone && existingProfiles.some((item) => String(item.phone || '').trim() === normalizedPhone)) {
+    duplicate_flags.push('Duplicate phone');
+  }
+
+  const gpaScale = readNumber(profile.gpa_scale);
+  const gpa = readNumber(profile.gpa);
+  if (gpaScale !== null && gpa !== null && gpa > gpaScale) fraud_flags.push('Unrealistic GPA');
+
+  if (readNumber(profile.english_score) !== null && profile.english_test_type) {
+    const max = ENGLISH_MAX[profile.english_test_type];
+    if (max && Number(profile.english_score) > max) fraud_flags.push('Unrealistic English score');
+  }
+
+  if (recentProfiles.length >= 3 && normalizedPhone) {
+    fraud_flags.push('Multiple rapid signups around the same period');
+  }
+
+  return { duplicate_flags, fraud_flags };
 }
 
 export function validateDocumentUpload(documentType, fileName, fileSize) {
   const ext = String(fileName || '').split('.').pop()?.toLowerCase();
   if (!documentType) return 'Document type is required.';
   if (!fileName) return 'File name is required.';
-  if (!FILE_EXTENSIONS.includes(ext)) {
-    return `Allowed file types: ${FILE_EXTENSIONS.join(', ')}.`;
-  }
-  if (readNumber(fileSize) !== null && Number(fileSize) > MAX_FILE_SIZE) {
-    return 'File size must be 10 MB or less.';
-  }
+  if (!FILE_EXTENSIONS.includes(ext)) return `Allowed file types: ${FILE_EXTENSIONS.join(', ')}.`;
+  if (readNumber(fileSize) !== null && Number(fileSize) > MAX_FILE_SIZE) return 'File size must be 10 MB or less.';
   return null;
 }
 
@@ -430,18 +431,12 @@ function parseProgramIntakes(program) {
 
 function intakeMatchDetails(preferredIntake, program) {
   const programIntakes = parseProgramIntakes(program);
-  if (!preferredIntake) {
-    return { matched: true, nearest: programIntakes[0] || null, weight: 3, reason: 'Flexible intake preference' };
-  }
-  if (programIntakes.includes(preferredIntake)) {
-    return { matched: true, nearest: preferredIntake, weight: 5, reason: 'Preferred intake available' };
-  }
+  if (!preferredIntake) return { matched: true, nearest: programIntakes[0] || null, weight: 3, reason: 'Flexible intake preference' };
+  if (programIntakes.includes(preferredIntake)) return { matched: true, nearest: preferredIntake, weight: 5, reason: 'Preferred intake available' };
 
   const preferredSeason = preferredIntake.split(' ')[0];
   const sameSeason = programIntakes.find((item) => item.startsWith(preferredSeason));
-  if (sameSeason) {
-    return { matched: false, nearest: sameSeason, weight: 3, reason: `Nearest intake is ${sameSeason}` };
-  }
+  if (sameSeason) return { matched: false, nearest: sameSeason, weight: 3, reason: `Nearest intake is ${sameSeason}` };
 
   const sorted = [...programIntakes].sort((a, b) => {
     const aIndex = INTAKE_PRIORITY.indexOf(a.split(' ')[0]);
@@ -453,94 +448,57 @@ function intakeMatchDetails(preferredIntake, program) {
 }
 
 function subjectMatchDetails(preferredSubject, program) {
-  if (!preferredSubject) {
-    return { tier: 'flexible', score: 8, reason: 'Subject preference not specified' };
-  }
+  if (!preferredSubject) return { tier: 'flexible', score: 8, reason: 'Subject preference not specified' };
 
-  const haystack = [
-    program.name,
-    program.subject_area,
-    ...normalizeScalarList(program.related_subjects)
-  ]
+  const haystack = [program.name, program.subject_area, ...normalizeScalarList(program.related_subjects)]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 
-  if (haystack.includes(preferredSubject.toLowerCase())) {
-    return { tier: 'exact', score: 20, reason: 'Exact subject match' };
-  }
+  if (haystack.includes(preferredSubject.toLowerCase())) return { tier: 'exact', score: 20, reason: 'Exact subject match' };
 
   const related = SUBJECT_MAPPINGS[preferredSubject] || [];
   const foundRelated = related.find((item) => haystack.includes(item.toLowerCase()));
-  if (foundRelated) {
-    return { tier: 'related', score: 12, reason: `Related subject match: ${foundRelated}` };
-  }
-
+  if (foundRelated) return { tier: 'related', score: 12, reason: `Related subject match: ${foundRelated}` };
   return { tier: 'none', score: 0, reason: 'Subject mismatch' };
 }
 
 function gpaMatchDetails(profile, program, countryRules) {
   const normalizedGpa = profile.normalized_gpa;
   const programMin = readNumber(program.min_gpa_required) ?? countryRules.min_gpa_required;
-  if (normalizedGpa === null) {
-    return { eligible: false, score: 0, category: 'missing', reason: 'Missing GPA' };
-  }
-  if (normalizedGpa >= programMin + 0.2) {
-    return { eligible: true, score: 30, category: 'above', reason: 'Above GPA requirement' };
-  }
-  if (normalizedGpa >= programMin) {
-    return { eligible: true, score: 24, category: 'meets', reason: 'Meets GPA requirement' };
-  }
-  if (normalizedGpa >= programMin - countryRules.gpa_tolerance) {
-    return { eligible: true, score: 12, category: 'tolerance', reason: 'Below GPA requirement but within tolerance' };
-  }
+  if (normalizedGpa === null) return { eligible: false, score: 0, category: 'missing', reason: 'Missing GPA' };
+  if (normalizedGpa >= programMin + 0.2) return { eligible: true, score: 30, category: 'above', reason: 'Above GPA requirement' };
+  if (normalizedGpa >= programMin) return { eligible: true, score: 24, category: 'meets', reason: 'Meets GPA requirement' };
+  if (normalizedGpa >= programMin - countryRules.gpa_tolerance) return { eligible: true, score: 12, category: 'tolerance', reason: 'Conditional GPA match' };
   return { eligible: false, score: 0, category: 'below', reason: 'Below GPA requirement' };
 }
 
 function englishMatchDetails(profile, program, countryRules) {
   const required = shouldRequireEnglishTest(profile, countryRules);
   const programRequiresEnglish = program.english_test_required ?? required;
-  if (!programRequiresEnglish) {
-    return { eligible: true, score: 15, category: 'waived', reason: 'English test not required' };
-  }
+  if (!programRequiresEnglish) return { eligible: true, score: 15, category: 'waived', reason: 'English test not required' };
 
   const testType = profile.english_test_type;
   const score = readNumber(profile.english_score);
   const ieltsRequirement = readNumber(program.min_english_score) ?? 6;
-
-  if (!testType || score === null) {
-    return { eligible: false, score: 0, category: 'missing', reason: 'Missing English test score' };
-  }
+  if (!testType || score === null) return { eligible: false, score: 0, category: 'missing', reason: 'Missing English test score' };
 
   const requiredScore = englishThresholdForType(ieltsRequirement, testType);
   const tolerance = testType === 'IELTS' ? 0.5 : Math.ceil(requiredScore * 0.08);
-
-  if (score >= requiredScore) {
-    return { eligible: true, score: 20, category: 'meets', reason: `${testType} meets requirement` };
-  }
-  if (score >= requiredScore - tolerance) {
-    return { eligible: true, score: 8, category: 'tolerance', reason: `${testType} slightly below requirement` };
-  }
+  if (score >= requiredScore) return { eligible: true, score: 20, category: 'meets', reason: `${testType} meets requirement` };
+  if (score >= requiredScore - tolerance) return { eligible: true, score: 8, category: 'tolerance', reason: 'Conditional English match' };
   return { eligible: false, score: 0, category: 'below', reason: `${testType} below requirement` };
 }
 
 function budgetMatchDetails(profile, program, countryRules, hasScholarship) {
   const budgetMax = readNumber(profile.budget_max);
   const tuitionFee = readNumber(program.tuition_fee);
-  if (budgetMax === null || tuitionFee === null) {
-    return { category: 'unknown', score: 6, reason: 'Budget comparison unavailable' };
-  }
+  if (budgetMax === null || tuitionFee === null) return { category: 'unknown', score: 6, reason: 'Budget comparison unavailable' };
 
   const toleranceBudget = budgetMax * (1 + countryRules.budget_tolerance_pct);
-  if (tuitionFee <= budgetMax) {
-    return { category: 'within', score: 15, reason: 'Within budget' };
-  }
-  if (tuitionFee <= toleranceBudget) {
-    return { category: 'slightly_above', score: 8, reason: 'Slightly above budget' };
-  }
-  if (hasScholarship) {
-    return { category: 'aid_needed', score: 4, reason: 'Requires financial aid' };
-  }
+  if (tuitionFee <= budgetMax) return { category: 'within', score: 15, reason: 'Within budget' };
+  if (tuitionFee <= toleranceBudget) return { category: 'slightly_above', score: 8, reason: 'Slightly above budget' };
+  if (hasScholarship) return { category: 'aid_needed', score: 4, reason: 'Requires financial aid' };
   return { category: 'over', score: 0, reason: 'Over budget' };
 }
 
@@ -567,6 +525,124 @@ export function buildScholarshipMatches(profile, program, scholarships = []) {
     }));
 }
 
+export function buildDeadlineSnapshot(program = {}) {
+  const application_days_left = daysUntil(program.application_deadline);
+  const scholarship_days_left = daysUntil(program.scholarship_deadline);
+
+  return {
+    application_deadline: program.application_deadline || null,
+    scholarship_deadline: program.scholarship_deadline || null,
+    application_days_left,
+    scholarship_days_left,
+    alerts: [
+      application_days_left !== null && application_days_left <= 30 ? `Application deadline in ${application_days_left} days` : null,
+      scholarship_days_left !== null && scholarship_days_left <= 21 ? `Scholarship deadline in ${scholarship_days_left} days` : null
+    ].filter(Boolean),
+    expired: Boolean((application_days_left !== null && application_days_left < 0) || program.is_active === false)
+  };
+}
+
+export function isProgramExpired(program = {}) {
+  return buildDeadlineSnapshot(program).expired;
+}
+
+export function determineNextSteps({
+  status,
+  offerType,
+  visaRiskLevel,
+  missingDocuments = [],
+  deadlineSnapshot = {},
+  rejectionSuggestions = []
+}) {
+  if (status === 'rejected') {
+    return rejectionSuggestions.length ? rejectionSuggestions : ['Review feedback and shortlist alternative programs.'];
+  }
+
+  const steps = [];
+  if (missingDocuments.length) steps.push(`Upload missing documents: ${missingDocuments.join(', ')}`);
+  if (status === 'draft') steps.push('Finalize SOP, documents, and counselor review before submission.');
+  if (status === 'submitted' || status === 'under_review') steps.push('Monitor university updates and respond to document requests quickly.');
+  if (status === 'accepted') {
+    steps.push(offerType === 'conditional' ? 'Satisfy the offer conditions before final acceptance.' : 'Accept the offer and prepare tuition deposit.');
+    steps.push(`Visa preparation priority: ${visaRiskLevel}`);
+  }
+  if (status === 'visa_processing') steps.push('Prepare visa file, finances, and interview readiness.');
+  if (deadlineSnapshot.application_days_left !== null && deadlineSnapshot.application_days_left <= 14) {
+    steps.unshift(`Deadline urgency: only ${deadlineSnapshot.application_days_left} days left.`);
+  }
+  return steps.slice(0, 5);
+}
+
+export function upsertTimelineEvent(timeline = [], event) {
+  const events = Array.isArray(timeline) ? [...timeline] : [];
+  const key = event.key || `${event.stage}:${event.label}`;
+  const existingIndex = events.findIndex((item) => (item.key || `${item.stage}:${item.label}`) === key);
+  const normalized = { ...event, key, at: event.at || new Date().toISOString() };
+
+  if (existingIndex >= 0) events[existingIndex] = { ...events[existingIndex], ...normalized };
+  else events.push(normalized);
+
+  return events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+}
+
+export async function suggestAlternatives(supabase, profileState, rejectedProgram, limit = 3) {
+  const degreeLevel = rejectedProgram.degree_level || profileState.study_level;
+  const { data: programs, error } = await supabase
+    .from('programs')
+    .select('*, universities(id, name, country, logo_url)')
+    .eq('degree_level', degreeLevel)
+    .neq('id', rejectedProgram.id)
+    .limit(20);
+
+  if (error) throw error;
+
+  return (programs || [])
+    .map((program) => evaluateProgram(profileState, program, deriveCountryRules(program.universities?.country || profileState.preferred_country), []))
+    .filter((program) => ['within', 'slightly_above', 'aid_needed', 'unknown'].includes(program.budget_category))
+    .filter((program) => program.subject_match !== 'none')
+    .sort((a, b) => b.match_score - a.match_score)
+    .slice(0, limit)
+    .map((program) => `${program.name} at ${program.universities?.name || 'University'} (${program.universities?.country || 'Country'})`);
+}
+
+export async function assignCounselor(supabase, { preferredCountry, preferredSubject } = {}) {
+  const { data: counselors, error } = await supabase
+    .from('profiles')
+    .select('user_id, name, preferred_country, counselor_specializations, counselor_capacity')
+    .eq('role', 'counselor');
+
+  if (error) throw error;
+  if (!counselors?.length) return null;
+
+  const counselorIds = counselors.map((item) => item.user_id).filter(Boolean);
+  const { data: workloads, error: workloadError } = await supabase
+    .from('applications')
+    .select('counselor_id, status')
+    .in('counselor_id', counselorIds);
+
+  if (workloadError) throw workloadError;
+
+  const workloadCount = new Map();
+  (workloads || []).forEach((item) => {
+    workloadCount.set(item.counselor_id, (workloadCount.get(item.counselor_id) || 0) + 1);
+  });
+
+  const scored = counselors.map((counselor) => {
+    const specializations = normalizeScalarList(counselor.counselor_specializations);
+    const workload = workloadCount.get(counselor.user_id) || 0;
+    const capacity = readNumber(counselor.counselor_capacity) || 30;
+    let score = 100 - Math.min(workload * 3, 60);
+
+    if (preferredCountry && (counselor.preferred_country === preferredCountry || specializations.includes(preferredCountry))) score += 20;
+    if (preferredSubject && specializations.some((item) => String(item).toLowerCase() === String(preferredSubject).toLowerCase())) score += 15;
+    if (workload >= capacity) score -= 30;
+
+    return { counselor, workload, capacity, score };
+  });
+
+  return scored.sort((a, b) => b.score - a.score || a.workload - b.workload)[0] || null;
+}
+
 export function evaluateProgram(profileState, program, countryRules, scholarships = []) {
   const programCountry = program.universities?.country || program.country;
   const subject = subjectMatchDetails(profileState.preferred_subject, program);
@@ -578,20 +654,27 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
   const country = countryPreferenceScore(profileState, programCountry);
   const gapYears = profileState.gap_years;
   const gapRisk = gapYears !== null && gapYears > countryRules.max_gap_years ? 'high' : gapYears !== null && gapYears > countryRules.gap_risk_threshold ? 'medium' : 'low';
+  const deadlineSnapshot = buildDeadlineSnapshot(program);
+  const visaRisk = computeVisaRisk(profileState, countryRules);
+  const seatsTotal = readNumber(program.seats_total);
+  const seatsFilled = readNumber(program.seats_filled) ?? 0;
+  const nearlyFull = seatsTotal !== null && seatsTotal > 0 && seatsFilled / seatsTotal >= 0.85;
 
   const qualificationAllowed = (EDUCATION_TO_STUDY_LEVEL[profileState.education_level] || []).includes(program.degree_level || profileState.study_level);
   const hardFailures = [];
   if (!qualificationAllowed) hardFailures.push('Qualification mismatch');
   if (!gpa.eligible) hardFailures.push(gpa.reason);
   if (!english.eligible) hardFailures.push(english.reason);
+  if (deadlineSnapshot.expired) hardFailures.push('Program deadline expired');
 
   const score = Math.max(
     0,
     Math.min(
       100,
-      gpa.score + english.score + budget.score + subject.score + country.score + intake.weight + (scholarshipMatches.length ? 5 : 0)
+      gpa.score + english.score + budget.score + subject.score + country.score + intake.weight + (scholarshipMatches.length ? 5 : 0) - (nearlyFull ? 8 : 0)
     )
   );
+  const conditional_match = gpa.category === 'tolerance' || english.category === 'tolerance';
 
   return {
     ...program,
@@ -605,6 +688,10 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
     subject_match: subject.tier,
     intake_match: intake.matched,
     nearest_intake: intake.nearest,
+    deadline_snapshot: deadlineSnapshot,
+    financial_risk: budget.category === 'over' ? 'high' : budget.category === 'aid_needed' ? 'medium' : 'low',
+    visa_risk_level: visaRisk.level,
+    conditional_match,
     match_score: score,
     match_category: score >= 80 ? 'High match' : score >= 60 ? 'Medium match' : 'Low match',
     match_reasons: [
@@ -614,7 +701,8 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
       subject.reason,
       country.reason,
       intake.reason,
-      scholarshipMatches.length ? 'Scholarship available' : null
+      scholarshipMatches.length ? 'Scholarship available' : null,
+      nearlyFull ? 'Intake nearly full' : null
     ].filter(Boolean),
     eligible_for_application: hardFailures.length === 0,
     recommendation_flags: [
@@ -622,7 +710,8 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
       !english.eligible ? 'Improve English score or target programs with waivers.' : null,
       budget.category === 'over' ? 'Increase budget or prioritize funded options.' : null,
       subject.tier === 'none' ? 'Widen subject preference for more results.' : null,
-      gapRisk === 'high' ? 'Long study gap may require explanation or override.' : null
+      gapRisk === 'high' ? 'Long study gap may require explanation or override.' : null,
+      conditional_match ? 'Conditional match: slight requirement relaxation applied.' : null
     ].filter(Boolean)
   };
 }
@@ -633,8 +722,12 @@ function stageMatches(programs, predicate) {
 
 export function computeMatchResults({ profile, programs, countries = [], scholarships = [] }) {
   const profileState = computeProfileState(profile);
+  const lead = computeLeadScore(profileState);
+  const visaRisk = computeVisaRisk(profileState);
   const countryByName = new Map((countries || []).map((country) => [country.name, country]));
+
   const evaluated = programs
+    .filter((program) => !isProgramExpired(program))
     .map((program) => {
       const programCountry = program.universities?.country || program.country;
       const countryRules = deriveCountryRules(programCountry, countryByName.get(programCountry));
@@ -643,17 +736,13 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
     .filter((program) => program.degree_level === profileState.study_level);
 
   const subjectFiltered = stageMatches(evaluated, (program) => program.subject_match !== 'none');
-  const countryFiltered = stageMatches(subjectFiltered, (program) => {
-    if (!profileState.preferred_country) return true;
-    return (program.universities?.country || program.country) === profileState.preferred_country;
-  });
+  const countryFiltered = stageMatches(subjectFiltered, (program) => !profileState.preferred_country || (program.universities?.country || program.country) === profileState.preferred_country);
   const intakeFiltered = stageMatches(countryFiltered, (program) => program.intake_match);
   const budgetFiltered = stageMatches(countryFiltered, (program) => ['within', 'slightly_above', 'aid_needed', 'unknown'].includes(program.budget_category));
   const eligibleOnly = (items) => items.filter((program) => program.eligible_for_application || program.hard_failures.length === 0);
 
   let relaxed_stage = 'none';
   let finalMatches = eligibleOnly(intakeFiltered);
-
   if (!finalMatches.length) {
     finalMatches = eligibleOnly(budgetFiltered);
     relaxed_stage = 'intake';
@@ -670,12 +759,23 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
   finalMatches = finalMatches.sort((a, b) => b.match_score - a.match_score);
 
   return {
-    profile: profileState,
+    profile: {
+      ...profileState,
+      lead_score: lead.score,
+      lead_temperature: lead.temperature,
+      visa_risk_score: visaRisk.score,
+      visa_risk_level: visaRisk.level
+    },
     matches: finalMatches,
     meta: {
       relaxed_stage,
       alternatives_returned: finalMatches.length > 0,
-      suggestions: profileState.improvement_flags
+      suggestions: profileState.improvement_flags,
+      application_strategy: {
+        safe: finalMatches.filter((item) => item.match_score >= 75).slice(0, 3).map((item) => item.id),
+        moderate: finalMatches.filter((item) => item.match_score >= 60 && item.match_score < 75).slice(0, 3).map((item) => item.id),
+        ambitious: finalMatches.filter((item) => item.match_score < 60).slice(0, 3).map((item) => item.id)
+      }
     }
   };
 }

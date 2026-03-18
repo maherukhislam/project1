@@ -49,7 +49,8 @@ export async function onRequest(context) {
     let programsQuery = supabase
       .from('programs')
       .select('*, universities(id, name, country, logo_url)')
-      .eq('degree_level', degreeLevel);
+      .eq('degree_level', degreeLevel)
+      .neq('is_active', false);
 
     if (preferredSubject) {
       programsQuery = programsQuery.or(`name.ilike.%${preferredSubject}%,subject_area.ilike.%${preferredSubject}%`);
