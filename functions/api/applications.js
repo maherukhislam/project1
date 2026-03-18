@@ -1,4 +1,5 @@
 import { getSupabase } from './_supabase.js';
+import { computeProfileState, deriveCountryRules, evaluateProgram, getDocumentRequirements, logAuditEvent } from './_matching.js';
 
 function mergeProfiles(applications, profiles) {
   const profileByUserId = new Map(
@@ -93,13 +94,87 @@ export async function onRequest(context) {
     const body = await request.json();
 
     if (request.method === 'POST') {
-      const { program_id, intake, notes } = body;
+      const { program_id, intake, notes, admin_override = false, override_reason = '' } = body;
+      const { data: fullProfile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
+      const profileState = computeProfileState(fullProfile || profile || {});
+      const { data: program, error: programError } = await supabase
+        .from('programs')
+        .select('*, universities(id, name, country, logo_url)')
+        .eq('id', program_id)
+        .single();
+      if (programError) throw programError;
+
+      const [{ data: countryRecord }, { data: scholarships }, { data: documents }] = await Promise.all([
+        supabase.from('countries').select('*').eq('name', program.universities?.country || '').maybeSingle(),
+        supabase.from('scholarships').select('*'),
+        supabase.from('documents').select('*').eq('user_id', user.id)
+      ]);
+
+      const countryRules = deriveCountryRules(program.universities?.country, countryRecord);
+      const programEvaluation = evaluateProgram(profileState, program, countryRules, scholarships || []);
+      const requiredDocuments = getDocumentRequirements({ ...profileState, preferred_country: program.universities?.country });
+      const uploadedDocs = new Set((documents || []).filter((doc) => doc.status !== 'rejected').map((doc) => doc.document_type));
+      const missingDocuments = requiredDocuments.filter((docType) => !uploadedDocs.has(docType));
+      const applicationBlocked =
+        profileState.profile_status !== 'complete' ||
+        !programEvaluation.eligible_for_application ||
+        missingDocuments.length > 0;
+
+      if (applicationBlocked && !(isAdmin && admin_override)) {
+        return new Response(
+          JSON.stringify({
+            error: 'Application blocked by eligibility rules.',
+            profile_status: profileState.profile_status,
+            blocking_reasons: [
+              ...profileState.blocking_reasons,
+              ...programEvaluation.hard_failures,
+              ...(missingDocuments.length ? [`Missing required documents: ${missingDocuments.join(', ')}`] : [])
+            ].filter(Boolean),
+            missing_documents: missingDocuments,
+            program_evaluation: programEvaluation
+          }),
+          { status: 400, headers }
+        );
+      }
+
       const { data, error } = await supabase
         .from('applications')
-        .insert({ user_id: user.id, program_id, intake, notes, status: 'draft' })
+        .insert({
+          user_id: user.id,
+          program_id,
+          intake,
+          notes,
+          status: 'draft',
+          eligibility_snapshot: {
+            profile_completion: profileState.profile_completion,
+            profile_status: profileState.profile_status,
+            program_evaluation: {
+              match_score: programEvaluation.match_score,
+              match_category: programEvaluation.match_category,
+              hard_failures: programEvaluation.hard_failures,
+              recommendation_flags: programEvaluation.recommendation_flags
+            },
+            missing_documents: missingDocuments
+          },
+          admin_override: Boolean(isAdmin && admin_override),
+          override_reason: isAdmin && admin_override ? override_reason || 'Manual override' : null
+        })
         .select()
         .single();
       if (error) throw error;
+      await logAuditEvent(supabase, {
+        user_id: user.id,
+        actor_user_id: user.id,
+        action: isAdmin && admin_override ? 'application.created_override' : 'application.created',
+        entity_type: 'application',
+        entity_id: String(data.id),
+        details: {
+          program_id,
+          profile_status: profileState.profile_status,
+          match_score: programEvaluation.match_score,
+          missing_documents: missingDocuments
+        }
+      });
       return new Response(JSON.stringify(data), { status: 201, headers });
     }
 
@@ -118,6 +193,14 @@ export async function onRequest(context) {
 
       const { data, error } = await updateQuery.select().single();
       if (error) throw error;
+      await logAuditEvent(supabase, {
+        user_id: data.user_id,
+        actor_user_id: user.id,
+        action: 'application.updated',
+        entity_type: 'application',
+        entity_id: String(data.id),
+        details: updates
+      });
       return new Response(JSON.stringify(data), { headers });
     }
 

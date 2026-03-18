@@ -1,4 +1,5 @@
 import { getSupabase } from './_supabase.js';
+import { logAuditEvent, validateDocumentUpload } from './_matching.js';
 
 function mergeProfiles(documents, profiles) {
   const profileByUserId = new Map(
@@ -88,12 +89,24 @@ export async function onRequest(context) {
 
     if (request.method === 'POST') {
       const { document_type, file_name, file_url, file_size } = body;
+      const validationError = validateDocumentUpload(document_type, file_name, file_size);
+      if (validationError) {
+        return new Response(JSON.stringify({ error: validationError }), { status: 400, headers });
+      }
       const { data, error } = await supabase
         .from('documents')
         .insert({ user_id: user.id, document_type, file_name, file_url, file_size, status: 'pending' })
         .select()
         .single();
       if (error) throw error;
+      await logAuditEvent(supabase, {
+        user_id: user.id,
+        actor_user_id: user.id,
+        action: 'document.uploaded',
+        entity_type: 'document',
+        entity_id: String(data.id),
+        details: { document_type, file_name, file_size }
+      });
       return new Response(JSON.stringify(data), { status: 201, headers });
     }
 
@@ -105,6 +118,14 @@ export async function onRequest(context) {
       
       const { data, error } = await supabase.from('documents').update({ status }).eq('id', id).select().single();
       if (error) throw error;
+      await logAuditEvent(supabase, {
+        user_id: data.user_id,
+        actor_user_id: user.id,
+        action: 'document.reviewed',
+        entity_type: 'document',
+        entity_id: String(data.id),
+        details: { status }
+      });
       return new Response(JSON.stringify(data), { headers });
     }
 

@@ -19,14 +19,28 @@ interface Profile {
   preferred_country?: string;
   education_level?: string;
   gpa?: number;
+  gpa_scale?: number;
+  academic_system?: string;
   english_score?: number;
   english_test_type?: string;
+  medium_of_instruction?: string;
+  last_education_year?: number;
   study_level?: string;
   preferred_subject?: string;
   budget_min?: number;
   budget_max?: number;
   intake?: string;
   profile_completion: number;
+  profile_status?: 'complete' | 'incomplete';
+  validation_errors?: Record<string, string>;
+  blocking_reasons?: string[];
+  improvement_flags?: string[];
+  completion_details?: {
+    required_fields?: string[];
+    valid_required_fields?: string[];
+    missing_required_fields?: string[];
+  };
+  document_requirements?: string[];
   role: string;
   created_at: string;
 }

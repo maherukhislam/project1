@@ -4,23 +4,22 @@ import { Upload, Trash2, CheckCircle, Clock, AlertCircle, File, Image, FileSprea
 import GlassCard from '../../components/GlassCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Documents: React.FC = () => {
+  const { profile } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
 
-  const documentTypes = [
-    { type: 'passport', label: 'Passport', required: true },
-    { type: 'academic_certificate', label: 'Academic Certificates', required: true },
-    { type: 'transcript', label: 'Transcripts', required: true },
-    { type: 'english_test', label: 'English Test Results', required: true },
-    { type: 'cv', label: 'CV / Resume', required: true },
-    { type: 'sop', label: 'Statement of Purpose', required: false },
-    { type: 'recommendation', label: 'Recommendation Letters', required: false },
-    { type: 'other', label: 'Other Documents', required: false }
-  ];
+  const requiredDocumentTypes = profile?.document_requirements || ['passport', 'academic_certificate', 'transcript', 'english_test', 'cv'];
+  const optionalTypes = ['sop', 'recommendation', 'research_proposal', 'financial_statement', 'aps_certificate', 'other'];
+  const documentTypes = [...new Set([...requiredDocumentTypes, ...optionalTypes])].map((type) => ({
+    type,
+    label: type.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+    required: requiredDocumentTypes.includes(type)
+  }));
 
   useEffect(() => {
     const fetchDocuments = async () => {

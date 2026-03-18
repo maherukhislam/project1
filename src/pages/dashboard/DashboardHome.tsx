@@ -28,6 +28,7 @@ const DashboardHome: React.FC = () => {
   const [recentApplications, setRecentApplications] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [profileState, setProfileState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +50,8 @@ const DashboardHome: React.FC = () => {
           api.get('/api/documents', { minimal: '1' })
         ]);
         setRecentApplications(recentAppsData);
-        setRecommendations(matchData);
+        setRecommendations(matchData.matches || []);
+        setProfileState(matchData.profile || null);
         setDocuments(docsData);
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -69,8 +71,8 @@ const DashboardHome: React.FC = () => {
     );
   }
 
-  const profileCompletion = profile?.profile_completion || 0;
-  const documentTypes = ['passport', 'academic_certificate', 'transcript', 'english_test', 'cv'];
+  const profileCompletion = profileState?.profile_completion || profile?.profile_completion || 0;
+  const documentTypes = profileState?.document_requirements || ['passport', 'academic_certificate', 'transcript', 'english_test', 'cv'];
   const uploadedRequiredCount = documentTypes.filter((type) => documents.some((doc) => doc.document_type === type)).length;
   const applicationCount = recentApplications.length;
   const submittedCount = recentApplications.filter((app) =>
@@ -78,10 +80,10 @@ const DashboardHome: React.FC = () => {
   ).length;
 
   const nextStep =
-    profileCompletion < 80
+    profileState?.profile_status === 'incomplete'
       ? {
           title: 'Complete your profile',
-          desc: 'Add academics, budget, and intake preferences to unlock accurate matching.',
+          desc: profileState?.blocking_reasons?.[0] || 'Add all required details to unlock matching and applications.',
           link: '/dashboard/profile',
           cta: 'Update Profile'
         }
@@ -216,9 +218,9 @@ const DashboardHome: React.FC = () => {
 
               <div className="mt-6 space-y-3">
                 {[
-                  { label: 'Academics', ready: Boolean(profile?.gpa && profile?.study_level) },
-                  { label: 'Preferences', ready: Boolean(profile?.preferred_country && profile?.preferred_subject) },
-                  { label: 'Budget & Intake', ready: Boolean(profile?.budget_max && profile?.intake) }
+                  { label: 'Academics', ready: Boolean(profile?.gpa && profile?.study_level && profile?.academic_system) },
+                  { label: 'Preferences', ready: Boolean(profile?.preferred_country && profile?.preferred_subject && profile?.medium_of_instruction) },
+                  { label: 'Budget & Intake', ready: Boolean(profile?.budget_max && profile?.intake && profile?.last_education_year) }
                 ].map((item) => (
                   <div
                     key={item.label}

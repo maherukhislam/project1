@@ -12,6 +12,8 @@ const defaultIntake = (profileIntake?: string) => profileIntake || 'Fall 2026';
 const UniversityMatch: React.FC = () => {
   const { profile } = useAuth();
   const [matches, setMatches] = useState<any[]>([]);
+  const [matchMeta, setMatchMeta] = useState<any>(null);
+  const [profileState, setProfileState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creatingId, setCreatingId] = useState<number | null>(null);
   const [createdProgramIds, setCreatedProgramIds] = useState<number[]>([]);
@@ -29,7 +31,9 @@ const UniversityMatch: React.FC = () => {
           preferred_subject: profile.preferred_subject,
           study_level: profile.study_level
         });
-        setMatches(data);
+        setMatches(data.matches || []);
+        setMatchMeta(data.meta || null);
+        setProfileState(data.profile || null);
       } catch (err) {
         console.error('Failed to fetch matches:', err);
       } finally {
@@ -63,7 +67,7 @@ const UniversityMatch: React.FC = () => {
     );
   }
 
-  const isProfileIncomplete = !profile?.gpa || !profile?.study_level;
+  const isProfileIncomplete = profileState?.profile_status === 'incomplete' || profile?.profile_status === 'incomplete';
 
   return (
     <div className="space-y-8">
@@ -101,8 +105,17 @@ const UniversityMatch: React.FC = () => {
           <Target className="w-16 h-16 text-slate-300 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Complete Your Profile</h2>
           <p className="text-slate-600 mb-6 max-w-md mx-auto">
-            Add your GPA and intended study level so the matching engine can recommend realistic programs.
+            Fill every required field and resolve validation errors before matching is enabled.
           </p>
+          {profileState?.blocking_reasons?.length ? (
+            <div className="mx-auto mb-6 max-w-xl space-y-2 text-left">
+              {profileState.blocking_reasons.map((reason: string) => (
+                <div key={reason} className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {reason}
+                </div>
+              ))}
+            </div>
+          ) : null}
           <Link
             to="/dashboard/profile"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 transition-all font-medium"
@@ -130,9 +143,19 @@ const UniversityMatch: React.FC = () => {
             <p className="text-slate-600">{matches.length} programs matched to your profile</p>
             <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-medium text-sky-700">
               <Sparkles className="w-4 h-4" />
-              Ordered by fit
+              {matchMeta?.relaxed_stage && matchMeta.relaxed_stage !== 'none' ? `Fallback: relaxed ${matchMeta.relaxed_stage}` : 'Ordered by fit'}
             </div>
           </div>
+
+          {matchMeta?.suggestions?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {matchMeta.suggestions.map((item: string) => (
+                <span key={item} className="rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-700">
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {matches.map((program, i) => {
             const isCreating = creatingId === program.id;
@@ -165,6 +188,11 @@ const UniversityMatch: React.FC = () => {
                               {reason}
                             </span>
                           ))}
+                          {program.nearest_intake && !program.intake_match ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs">
+                              Nearest intake: {program.nearest_intake}
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="flex flex-wrap gap-4 text-sm text-slate-600">
@@ -183,6 +211,7 @@ const UniversityMatch: React.FC = () => {
                               Scholarship Available
                             </span>
                           )}
+                          <span>{program.match_category}</span>
                         </div>
                       </div>
                     </div>

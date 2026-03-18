@@ -1,9 +1,10 @@
 import { getSupabase } from './_supabase.js';
+import { computeMatchResults } from './_matching.js';
 
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -20,90 +21,72 @@ export async function onRequest(context) {
   }
 
   try {
-    const { gpa, english_score, budget_max, preferred_country, preferred_subject, study_level, limit } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const body = await request.json();
+    let profile = body;
 
-    let query = supabase
+    if (token) {
+      const {
+        data: { user },
+        error: authError
+      } = await supabase.auth.getUser(token);
+
+      if (authError) {
+        return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers });
+      }
+
+      if (user) {
+        const { data: savedProfile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
+        profile = { ...(savedProfile || {}), ...body };
+      }
+    }
+
+    const degreeLevel = profile.study_level || 'Master';
+    const preferredCountry = profile.preferred_country;
+    const preferredSubject = profile.preferred_subject;
+
+    let programsQuery = supabase
       .from('programs')
-      .select('id, name, degree_level, tuition_fee, duration, min_gpa_required, min_english_score, scholarship_available, universities(name, country)')
-      .eq('degree_level', study_level || 'Master');
+      .select('*, universities(id, name, country, logo_url)')
+      .eq('degree_level', degreeLevel);
 
-    if (preferred_country) {
-      query = query.eq('universities.country', preferred_country);
+    if (preferredSubject) {
+      programsQuery = programsQuery.or(`name.ilike.%${preferredSubject}%,subject_area.ilike.%${preferredSubject}%`);
     }
 
-    if (budget_max) {
-      // keep a small margin to avoid being too strict while reducing scanned rows
-      query = query.lte('tuition_fee', Math.round(Number(budget_max) * 1.25));
-    }
+    const [{ data: programs, error: programError }, { data: countries, error: countriesError }, { data: scholarships, error: scholarshipsError }] =
+      await Promise.all([
+        programsQuery,
+        supabase.from('countries').select('*'),
+        supabase.from('scholarships').select('*')
+      ]);
 
-    const { data: programs, error } = await query;
-    if (error) throw error;
+    if (programError) throw programError;
+    if (countriesError) throw countriesError;
+    if (scholarshipsError) throw scholarshipsError;
 
-    const scoredPrograms = programs.map(program => {
-      let score = 0;
-      let matches = [];
-      
-      if (gpa && program.min_gpa_required) {
-        if (gpa >= program.min_gpa_required) {
-          score += 25;
-          matches.push('GPA meets requirement');
-        }
-      } else {
-        score += 15;
-      }
-      
-      if (english_score && program.min_english_score) {
-        if (english_score >= program.min_english_score) {
-          score += 25;
-          matches.push('English score meets requirement');
-        }
-      } else {
-        score += 15;
-      }
-      
-      if (budget_max && program.tuition_fee) {
-        if (program.tuition_fee <= budget_max) {
-          score += 20;
-          matches.push('Within budget');
-        }
-      } else {
-        score += 10;
-      }
-      
-      if (preferred_country && program.universities?.country) {
-        if (program.universities.country === preferred_country) {
-          score += 15;
-          matches.push('Preferred country');
-        }
-      } else {
-        score += 5;
-      }
-      
-      if (preferred_subject) {
-        if (program.name.toLowerCase().includes(preferred_subject.toLowerCase())) {
-          score += 15;
-          matches.push('Matches subject interest');
-        }
-      } else {
-        score += 5;
-      }
-      
-      if (program.scholarship_available) {
-        score += 10;
-        matches.push('Scholarship available');
-      }
-      
-      return { ...program, match_score: score, match_reasons: matches };
+    const filteredPrograms = preferredCountry
+      ? (programs || []).filter((program) => program.universities?.country === preferredCountry || !program.universities?.country)
+      : (programs || []);
+
+    const result = computeMatchResults({
+      profile,
+      programs: filteredPrograms.length ? filteredPrograms : programs || [],
+      countries: countries || [],
+      scholarships: scholarships || []
     });
 
-    const maxResults = Number(limit) > 0 ? Number(limit) : 20;
+    const limit = Number(body.limit) > 0 ? Number(body.limit) : 20;
 
-    const topMatches = scoredPrograms
-      .filter(p => p.match_score >= 40)
-      .sort((a, b) => b.match_score - a.match_score)
-      .slice(0, maxResults);
-
-    return new Response(JSON.stringify(topMatches), { headers });
+    return new Response(
+      JSON.stringify({
+        profile: result.profile,
+        meta: result.meta,
+        matches: result.matches.slice(0, limit)
+      }),
+      { headers }
+    );
   } catch (err) {
     console.error('University match error:', err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });

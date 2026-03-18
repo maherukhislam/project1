@@ -1,4 +1,5 @@
 import { getSupabase, hasSupabaseServiceRoleKey } from './_supabase.js';
+import { computeProfileState, logAuditEvent } from './_matching.js';
 
 const DEFAULT_BOOTSTRAP_ADMIN_EMAIL = 'maherukhislam2007@gmail.com';
 
@@ -13,6 +14,11 @@ const isRecursiveProfilesPolicyError = (error) =>
 
 const buildFallbackProfile = (user, isBootstrapCandidate) => {
   const role = user.user_metadata?.role || (isBootstrapCandidate ? 'admin' : 'student');
+  const computed = computeProfileState({
+    user_id: user.id,
+    email: user.email,
+    name: buildDefaultName(user)
+  });
 
   return {
     id: 0,
@@ -20,7 +26,12 @@ const buildFallbackProfile = (user, isBootstrapCandidate) => {
     email: user.email,
     name: buildDefaultName(user),
     role,
-    profile_completion: role === 'admin' ? 100 : 10,
+    profile_completion: role === 'admin' ? 100 : computed.profile_completion,
+    profile_status: role === 'admin' ? 'complete' : computed.profile_status,
+    completion_details: computed.completion_details,
+    validation_errors: computed.validation_errors,
+    blocking_reasons: computed.blocking_reasons,
+    document_requirements: computed.document_requirements,
     created_at: new Date().toISOString(),
     fallback: true
   };
@@ -59,17 +70,18 @@ export async function onRequest(context) {
       const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
 
       if (!error && data) {
+        const computed = computeProfileState(data);
         if (isBootstrapCandidate && data.role !== 'admin') {
           const { data: updated, error: promoteError } = await supabase
             .from('profiles')
-            .update({ role: 'admin', profile_completion: Math.max(data.profile_completion || 0, 100) })
+            .update({ role: 'admin', profile_completion: Math.max(computed.profile_completion || 0, 100), profile_status: 'complete' })
             .eq('user_id', user.id)
             .select('*')
             .single();
           if (promoteError) throw promoteError;
-          return new Response(JSON.stringify(updated), { headers });
+          return new Response(JSON.stringify({ ...updated, ...computeProfileState(updated) }), { headers });
         }
-        return new Response(JSON.stringify(data), { headers });
+        return new Response(JSON.stringify({ ...data, ...computed }), { headers });
       }
 
       if (isRecursiveProfilesPolicyError(error)) {
@@ -97,7 +109,8 @@ export async function onRequest(context) {
         email: user.email,
         name: buildDefaultName(user),
         role,
-        profile_completion: role === 'admin' ? 100 : 10
+        profile_completion: role === 'admin' ? 100 : 10,
+        profile_status: role === 'admin' ? 'complete' : 'incomplete'
       };
 
       const { data: created, error: createError } = await supabase
@@ -115,21 +128,29 @@ export async function onRequest(context) {
 
       if (createError) throw createError;
 
-      return new Response(JSON.stringify(created), { headers });
+      return new Response(JSON.stringify({ ...created, ...computeProfileState(created) }), { headers });
     }
 
     if (request.method === 'PUT') {
       const updates = await request.json();
-      const fields = ['name', 'phone', 'nationality', 'preferred_country', 'education_level', 'gpa', 'english_score', 'english_test_type', 'study_level', 'preferred_subject', 'budget_min', 'budget_max', 'intake'];
-      const filledFields = fields.filter(f => updates[f] || updates[f] === 0).length;
-      const completion = Math.round((filledFields / fields.length) * 100);
-      const payload = {
+      const mergedProfile = {
+        ...(await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()).data,
+        ...updates,
         user_id: user.id,
         email: user.email,
         name: updates.name || buildDefaultName(user),
-        role: user.user_metadata?.role || (user.email?.toLowerCase() === bootstrapAdminEmail ? 'admin' : 'student'),
+        role: user.user_metadata?.role || (user.email?.toLowerCase() === bootstrapAdminEmail ? 'admin' : 'student')
+      };
+      const computed = computeProfileState(mergedProfile);
+      const isAdminRole = mergedProfile.role === 'admin';
+      const payload = {
+        user_id: user.id,
+        email: user.email,
+        name: mergedProfile.name,
+        role: mergedProfile.role,
         ...updates,
-        profile_completion: completion
+        profile_completion: isAdminRole ? 100 : computed.profile_completion,
+        profile_status: isAdminRole ? 'complete' : computed.profile_status
       };
 
       const { data, error } = await supabase
@@ -142,13 +163,26 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({
           ...buildFallbackProfile(user, user.email?.toLowerCase() === bootstrapAdminEmail),
           ...updates,
-          profile_completion: completion,
+          profile_completion: computed.profile_completion,
+          profile_status: computed.profile_status,
+          validation_errors: computed.validation_errors,
           warning: 'Profile changes could not be persisted because the profiles RLS policy is recursive.'
         }), { headers });
       }
 
       if (error) throw error;
-      return new Response(JSON.stringify(data), { headers });
+      await logAuditEvent(supabase, {
+        user_id: user.id,
+        actor_user_id: user.id,
+        action: 'profile.updated',
+        entity_type: 'profile',
+        entity_id: String(data.id),
+        details: {
+          profile_completion: computed.profile_completion,
+          profile_status: computed.profile_status
+        }
+      });
+      return new Response(JSON.stringify({ ...data, ...computed }), { headers });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
