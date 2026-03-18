@@ -79,9 +79,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await api.get('/api/profile');
       setProfile(data);
+      return data;
     } catch (err) {
       console.error('Failed to fetch profile:', err);
+      setProfile(null);
+      return null;
     }
+  };
+
+  const syncSession = async (session: Session | null) => {
+    setUser(session?.user as User | null);
+
+    if (!session?.user) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    await fetchProfile();
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -108,18 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setUser(session?.user as User | null);
-      if (session?.user) fetchProfile();
-      setLoading(false);
+      void syncSession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user as User | null);
-      if (session?.user) {
-        fetchProfile();
-      } else {
-        setProfile(null);
-      }
+      void syncSession(session);
     });
 
     return () => subscription.unsubscribe();

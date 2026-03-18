@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
   Award,
@@ -65,6 +65,10 @@ const DashboardLayout: React.FC = () => {
     if (exact) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
+
+  if (profile?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
 
   const completion = profile?.profile_completion || 0;
 
