@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, Award, FileText, BookOpen, ChevronRight, Clock, CheckCircle, XCircle, AlertCircle, Eye } from 'lucide-react';
+import { Users, GraduationCap, Award, FileText, BookOpen, ChevronRight, AlertCircle, ShieldPlus } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 
@@ -47,16 +47,6 @@ const AdminDashboard: React.FC = () => {
     { icon: Award, label: 'Scholarships', value: stats?.totalScholarships || 0, color: 'from-amber-500 to-orange-600', link: '/admin/scholarships' }
   ];
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'accepted': return <CheckCircle className="w-4 h-4 text-green-400" />;
-      case 'rejected': return <XCircle className="w-4 h-4 text-red-400" />;
-      case 'under_review': return <AlertCircle className="w-4 h-4 text-amber-400" />;
-      case 'visa_processing': return <Eye className="w-4 h-4 text-purple-400" />;
-      default: return <Clock className="w-4 h-4 text-blue-400" />;
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted': return 'bg-green-500/20 text-green-400';
@@ -72,34 +62,115 @@ const AdminDashboard: React.FC = () => {
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const statusCounts = stats?.applicationsByStatus || {};
+  const totalStudents = stats?.totalStudents || 0;
+  const totalApplications = stats?.totalApplications || 0;
+  const pendingReviews = (statusCounts.submitted || 0) + (statusCounts.under_review || 0);
+  const decisioned = (statusCounts.accepted || 0) + (statusCounts.rejected || 0);
+  const visaProcessing = statusCounts.visa_processing || 0;
+  const attentionStudents = recentStudents.filter((student) => (student.profile_completion || 0) < 60).slice(0, 4);
+
+  const workflow = [
+    {
+      label: 'Intake',
+      count: statusCounts.draft || 0,
+      hint: 'New leads and draft applications'
+    },
+    {
+      label: 'Review',
+      count: pendingReviews,
+      hint: 'Counselor queue'
+    },
+    {
+      label: 'Decision',
+      count: decisioned,
+      hint: 'Accepted or rejected cases'
+    },
+    {
+      label: 'Visa',
+      count: visaProcessing,
+      hint: 'Final processing stage'
+    }
+  ];
+
   return (
     <div className="space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-        <p className="text-slate-400">Overview of your study abroad platform</p>
+        <div className="relative overflow-hidden rounded-3xl border border-slate-700 bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 p-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.12),transparent_35%)]" />
+          <div className="relative grid gap-8 lg:grid-cols-[1.5fr_0.9fr]">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
+                Live operations
+              </div>
+              <h1 className="mt-4 text-4xl font-bold text-white">Admin Dashboard</h1>
+              <p className="mt-3 max-w-2xl text-slate-300 leading-7">
+                Control the admissions pipeline, monitor student progress, and keep the platform moving with a single operations view.
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{totalStudents}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Applications</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{totalApplications}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Reviews</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{pendingReviews}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Visa</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{visaProcessing}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {workflow.map((item) => (
+                <div key={item.label} className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-white">{item.label}</p>
+                      <p className="mt-1 text-xs text-slate-400">{item.hint}</p>
+                    </div>
+                    <span className="text-2xl font-bold text-white">{item.count}</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-700">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500"
+                      style={{ width: `${Math.min(100, Math.max(8, item.count * 8))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {statCards.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.08 }}
           >
             <Link to={stat.link}>
-              <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700 hover:bg-slate-700/50 transition-all group">
-                <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
-                  <stat.icon className="w-5 h-5 text-white" />
+              <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-5 transition-all hover:border-sky-500/40 hover:bg-slate-700/50">
+                <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color}`}>
+                  <stat.icon className="h-5 w-5 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-white mb-0.5">{stat.value}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-slate-400 text-sm">{stat.label}</p>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition-colors" />
+                <p className="text-3xl font-bold text-white">{stat.value}</p>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-400">{stat.label}</p>
+                  <ChevronRight className="h-4 w-4 text-slate-500 transition-colors group-hover:text-sky-400" />
                 </div>
               </div>
             </Link>
@@ -107,130 +178,170 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Applications by Status */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700"
-      >
-        <h2 className="text-xl font-semibold text-white mb-4">Applications by Status</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {['draft', 'submitted', 'under_review', 'accepted', 'rejected', 'visa_processing'].map((status) => (
-            <div key={status} className="p-4 rounded-xl bg-slate-700/30 text-center">
-              <div className="flex justify-center mb-2">
-                {getStatusIcon(status)}
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {stats?.applicationsByStatus?.[status] || 0}
-              </p>
-              <p className="text-xs text-slate-400 capitalize">{status.replace('_', ' ')}</p>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Recent Applications */}
+      <div className="grid gap-8 lg:grid-cols-[1.35fr_0.85fr]">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700"
+          transition={{ delay: 0.18 }}
+          className="rounded-3xl border border-slate-700 bg-slate-800/50 p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">Recent Applications</h2>
-            <Link to="/admin/applications" className="text-sky-400 hover:text-sky-300 text-sm font-medium">
-              View All
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Pipeline Snapshot</h2>
+              <p className="mt-1 text-sm text-slate-400">Admissions flow across the active queue.</p>
+            </div>
+            <Link to="/admin/applications" className="text-sm font-medium text-sky-400 hover:text-sky-300">
+              Open board
             </Link>
           </div>
-          <div className="space-y-3">
-            {recentApps.length > 0 ? recentApps.map((app) => (
-              <div key={app.id} className="flex items-center gap-4 p-3 rounded-xl bg-slate-700/30 hover:bg-slate-700/50 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                  {app.profiles?.name?.charAt(0) || 'S'}
+
+          <div className="mt-6 space-y-4">
+            {workflow.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-white">{item.label}</p>
+                    <p className="text-sm text-slate-400">{item.hint}</p>
+                  </div>
+                  <span className="rounded-full bg-slate-700 px-3 py-1 text-sm font-semibold text-white">
+                    {item.count}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{app.profiles?.name || 'Student'}</p>
-                  <p className="text-slate-400 text-sm truncate">{app.programs?.name || 'Program'}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {recentApps.length > 0 ? recentApps.slice(0, 4).map((app) => (
+              <div key={app.id} className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-white">{app.profiles?.name || 'Student'}</p>
+                    <p className="mt-1 truncate text-sm text-slate-400">{app.programs?.name || 'Program'}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(app.status)}`}>
                     {app.status?.replace('_', ' ')}
                   </span>
-                  <p className="text-slate-500 text-xs mt-1">{formatDate(app.created_at)}</p>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                  <span>{app.programs?.universities?.name || 'University'}</span>
+                  <span>{formatDate(app.created_at)}</span>
                 </div>
               </div>
             )) : (
-              <p className="text-slate-500 text-center py-4">No applications yet</p>
+              <div className="rounded-2xl border border-slate-700 bg-slate-900/50 p-6 text-sm text-slate-400">
+                No recent applications yet.
+              </div>
             )}
           </div>
         </motion.div>
 
-        {/* Recent Students */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700"
+          transition={{ delay: 0.24 }}
+          className="space-y-8"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">Recent Registrations</h2>
-            <Link to="/admin/students" className="text-sky-400 hover:text-sky-300 text-sm font-medium">
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {recentStudents.length > 0 ? recentStudents.map((student) => (
-              <div key={student.id} className="flex items-center gap-4 p-3 rounded-xl bg-slate-700/30 hover:bg-slate-700/50 transition-colors">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white font-semibold text-sm">
-                  {student.name?.charAt(0) || 'S'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{student.name || 'Unknown'}</p>
-                  <p className="text-slate-400 text-sm truncate">{student.email}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1">
-                    <div className="w-12 h-1.5 bg-slate-600 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-sky-500 rounded-full"
-                        style={{ width: `${student.profile_completion || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-slate-400 text-xs">{student.profile_completion || 0}%</span>
-                  </div>
-                  <p className="text-slate-500 text-xs mt-1">{formatDate(student.created_at)}</p>
-                </div>
+          <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Needs Attention</h2>
+                <p className="mt-1 text-sm text-slate-400">Cases that should move this week.</p>
               </div>
-            )) : (
-              <p className="text-slate-500 text-center py-4">No students yet</p>
-            )}
+              <AlertCircle className="h-5 w-5 text-amber-400" />
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">Pending review</p>
+                  <p className="text-sm text-slate-400">Submitted and under review applications</p>
+                </div>
+                <span className="text-lg font-bold text-amber-300">{pendingReviews}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">Incomplete profiles</p>
+                  <p className="text-sm text-slate-400">Students below 60 percent completion</p>
+                </div>
+                <span className="text-lg font-bold text-sky-300">{attentionStudents.length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">Decisioned cases</p>
+                  <p className="text-sm text-slate-400">Accepted or rejected outcomes</p>
+                </div>
+                <span className="text-lg font-bold text-emerald-300">{decisioned}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Student Health</h2>
+                <p className="mt-1 text-sm text-slate-400">Latest registrations that need follow-up.</p>
+              </div>
+              <Users className="h-5 w-5 text-sky-400" />
+            </div>
+            <div className="mt-5 space-y-3">
+              {attentionStudents.length > 0 ? attentionStudents.map((student) => (
+                <Link key={student.id} to="/admin/students" className="block rounded-2xl border border-slate-700 bg-slate-900/50 p-4 hover:border-sky-500/40">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-white">{student.name || 'Student'}</p>
+                      <p className="text-sm text-slate-400">{student.email}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-sky-300">{student.profile_completion || 0}%</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-700">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500"
+                      style={{ width: `${student.profile_completion || 0}%` }}
+                    />
+                  </div>
+                </Link>
+              )) : (
+                <p className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4 text-sm text-slate-400">
+                  No profile gaps in the latest registrations.
+                </p>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Quick Actions */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.34 }}
       >
-        <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Quick Actions</h2>
+            <p className="mt-1 text-sm text-slate-400">Open the core management modules.</p>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[
-            { label: 'Add University', link: '/admin/universities', icon: GraduationCap, color: 'from-green-500 to-emerald-600' },
-            { label: 'Add Program', link: '/admin/programs', icon: BookOpen, color: 'from-cyan-500 to-teal-600' },
-            { label: 'Add Scholarship', link: '/admin/scholarships', icon: Award, color: 'from-amber-500 to-orange-600' },
-            { label: 'View Students', link: '/admin/students', icon: Users, color: 'from-blue-500 to-indigo-600' }
+            { label: 'Manage Students', desc: 'Lead view, profile progress, and pipeline actions.', link: '/admin/students', icon: Users, color: 'from-blue-500 to-indigo-600' },
+            { label: 'Review Applications', desc: 'Move cases through review, decision, and visa processing.', link: '/admin/applications', icon: FileText, color: 'from-purple-500 to-pink-600' },
+            { label: 'Universities', desc: 'Maintain the institution database and logos.', link: '/admin/universities', icon: GraduationCap, color: 'from-green-500 to-emerald-600' },
+            { label: 'Programs', desc: 'Edit course requirements and intake settings.', link: '/admin/programs', icon: BookOpen, color: 'from-cyan-500 to-teal-600' },
+            { label: 'Documents', desc: 'Approve, reject, or request re-uploads.', link: '/admin/documents', icon: Award, color: 'from-amber-500 to-orange-600' },
+            { label: 'Admin & Roles', desc: 'Control access for admins and counselors.', link: '/admin/admins', icon: ShieldPlus, color: 'from-slate-500 to-slate-700' }
           ].map((action, i) => (
             <Link key={i} to={action.link}>
-              <div className="p-4 rounded-xl bg-slate-700/30 border border-slate-700 hover:bg-slate-700/50 hover:border-sky-500/50 transition-all flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center`}>
-                  <action.icon className="w-5 h-5 text-white" />
+              <div className="group h-full rounded-2xl border border-slate-700 bg-slate-800/50 p-5 transition-all hover:-translate-y-0.5 hover:border-sky-500/40 hover:bg-slate-700/50">
+                <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${action.color}`}>
+                  <action.icon className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-white font-medium">{action.label}</span>
+                <h3 className="font-semibold text-white">{action.label}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">{action.desc}</p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-sky-400">
+                  Open module
+                  <ChevronRight className="h-4 w-4" />
+                </span>
               </div>
             </Link>
           ))}

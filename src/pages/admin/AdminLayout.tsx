@@ -9,16 +9,44 @@ const AdminLayout: React.FC = () => {
   const { profile, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
-  const navItems = [
-    { path: '/admin', icon: Home, label: 'Dashboard', exact: true },
-    { path: '/admin/students', icon: Users, label: 'Students' },
-    { path: '/admin/admins', icon: ShieldPlus, label: 'Admins' },
-    { path: '/admin/applications', icon: FileText, label: 'Applications' },
-    { path: '/admin/universities', icon: GraduationCap, label: 'Universities' },
-    { path: '/admin/programs', icon: BookOpen, label: 'Programs' },
-    { path: '/admin/scholarships', icon: Award, label: 'Scholarships' },
-    { path: '/admin/documents', icon: Upload, label: 'Documents' },
-    { path: '/admin/blog', icon: BarChart3, label: 'Blog / Content' },
+  const navGroups: Array<{
+    title: string;
+    items: Array<{
+      path: string;
+      icon: React.ComponentType<{ className?: string }>;
+      label: string;
+      exact?: boolean;
+    }>;
+  }> = [
+    {
+      title: 'Overview',
+      items: [
+        { path: '/admin', icon: Home, label: 'Dashboard', exact: true }
+      ]
+    },
+    {
+      title: 'Admissions',
+      items: [
+        { path: '/admin/students', icon: Users, label: 'Leads / Students' },
+        { path: '/admin/applications', icon: FileText, label: 'Applications' },
+        { path: '/admin/documents', icon: Upload, label: 'Documents' }
+      ]
+    },
+    {
+      title: 'Academics',
+      items: [
+        { path: '/admin/universities', icon: GraduationCap, label: 'Universities' },
+        { path: '/admin/programs', icon: BookOpen, label: 'Programs' },
+        { path: '/admin/scholarships', icon: Award, label: 'Scholarships' }
+      ]
+    },
+    {
+      title: 'System',
+      items: [
+        { path: '/admin/admins', icon: ShieldPlus, label: 'Admin & Roles' },
+        { path: '/admin/blog', icon: BarChart3, label: 'Content / CMS' }
+      ]
+    }
   ];
 
   const handleSignOut = async () => {
@@ -53,7 +81,10 @@ const AdminLayout: React.FC = () => {
         <div className="flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <Globe className="w-8 h-8 text-sky-400" />
-            <span className="text-xl font-bold text-white">Admin</span>
+            <div>
+              <span className="block text-xl font-bold text-white">StudyGlobal</span>
+              <span className="block text-xs text-slate-400">Operations Hub</span>
+            </div>
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -73,15 +104,19 @@ const AdminLayout: React.FC = () => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="p-6 border-b border-slate-700 hidden lg:block">
-            <Link to="/" className="flex items-center gap-2">
-              <Globe className="w-8 h-8 text-sky-400" />
-              <div>
-                <span className="text-xl font-bold text-white">StudyGlobal</span>
-                <span className="text-xs text-slate-500 block">Admin Panel</span>
-              </div>
-            </Link>
+            <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-indigo-500/10 p-4">
+              <Link to="/" className="flex items-center gap-2 mb-3">
+                <Globe className="w-8 h-8 text-sky-400" />
+                <div>
+                  <span className="text-xl font-bold text-white">StudyGlobal</span>
+                  <span className="text-xs text-sky-200/70 block">Operations Hub</span>
+                </div>
+              </Link>
+              <p className="text-sm text-slate-300 leading-6">
+                Manage student intake, application workflow, content, and platform settings from one place.
+              </p>
+            </div>
           </div>
 
           {/* User Info */}
@@ -98,25 +133,32 @@ const AdminLayout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 overflow-y-auto">
-            <ul className="space-y-1">
-              {navItems.map((item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                      isActive(item.path, item.exact)
-                        ? 'bg-sky-500/20 text-sky-400 font-medium'
-                        : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <nav className="flex-1 p-4 overflow-y-auto space-y-6">
+            {navGroups.map((group) => (
+              <div key={group.title}>
+                <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {group.title}
+                </p>
+                <ul className="space-y-1">
+                  {group.items.map((item) => (
+                    <li key={item.path}>
+                      <Link
+                        to={item.path}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                          isActive(item.path, item.exact)
+                            ? 'bg-sky-500/20 text-sky-400 font-medium ring-1 ring-sky-500/20'
+                            : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </nav>
 
           {/* Footer */}
