@@ -99,7 +99,7 @@ const DashboardLayout: React.FC = () => {
 
       <aside
         className={`
-          fixed top-0 left-0 z-40 h-full w-72
+          fixed top-0 left-0 z-40 h-full w-80
           transform border-r border-white/40 bg-white/55 backdrop-blur-2xl transition-transform duration-300
           lg:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -147,26 +147,35 @@ const DashboardLayout: React.FC = () => {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+          <nav className="flex-1 space-y-8 overflow-y-auto px-5 py-6">
             {navGroups.map((group) => (
-              <div key={group.title}>
-                <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <div
+                key={group.title}
+                className="rounded-[1.6rem] border border-white/70 bg-white/60 p-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+              >
+                <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                   {group.title}
                 </p>
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {group.items.map((item) => (
                     <li key={item.path}>
                       <Link
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
+                        className={`flex min-h-14 items-center gap-3 rounded-[1.15rem] px-4 py-3.5 text-[15px] transition-all ${
                           isActive(item.path, item.exact)
                             ? 'bg-slate-900 text-white shadow-[0_12px_25px_rgba(15,23,42,0.16)]'
-                            : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
+                            : 'text-slate-600 hover:bg-white hover:text-slate-900'
                         }`}
                       >
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
+                        <span
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                            isActive(item.path, item.exact) ? 'bg-white/12' : 'bg-[#f6f1e8] text-slate-700'
+                          }`}
+                        >
+                          <item.icon className="h-5 w-5" />
+                        </span>
+                        <span className="truncate font-medium">{item.label}</span>
                       </Link>
                     </li>
                   ))}
@@ -213,7 +222,7 @@ const DashboardLayout: React.FC = () => {
         />
       )}
 
-      <main className="relative min-h-screen pt-16 lg:ml-72 lg:pt-0">
+      <main className="relative min-h-screen pt-16 lg:ml-80 lg:pt-0">
         <div className="border-b border-white/30 px-6 py-4 lg:px-8">
           <div className="flex items-center justify-between rounded-[1.75rem] border border-white/50 bg-white/45 px-5 py-4 backdrop-blur-xl shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
             <div>
