@@ -94,6 +94,11 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   } catch (err) {
     console.error('Profile error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
+    const errorMessage = err?.message || 'Unknown error';
+    const details = errorMessage.includes('infinite recursion detected in policy for relation "profiles"')
+      ? 'Supabase RLS on public.profiles is recursively querying public.profiles. Apply supabase/rls_profiles.sql to replace the recursive policy with the non-recursive version.'
+      : undefined;
+
+    return new Response(JSON.stringify({ error: errorMessage, details }), { status: 500, headers });
   }
 }
