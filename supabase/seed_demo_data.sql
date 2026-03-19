@@ -351,7 +351,17 @@ select
   'Study Guides',
   true,
   now(),
-  (select id from auth.users where email = 'admin@studyglobal.com' limit 1);
+  (select id from auth.users where email = 'admin@studyglobal.com' limit 1)
+on conflict (slug) do update
+set
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  image_url = excluded.image_url,
+  category = excluded.category,
+  published = excluded.published,
+  created_at = excluded.created_at,
+  author_id = excluded.author_id;
 
 insert into public.blog_posts (
   title,
@@ -373,7 +383,17 @@ select
   'Visa Tips',
   true,
   now() - interval '7 days',
-  (select id from auth.users where email = 'admin@studyglobal.com' limit 1);
+  (select id from auth.users where email = 'admin@studyglobal.com' limit 1)
+on conflict (slug) do update
+set
+  title = excluded.title,
+  excerpt = excluded.excerpt,
+  content = excluded.content,
+  image_url = excluded.image_url,
+  category = excluded.category,
+  published = excluded.published,
+  created_at = excluded.created_at,
+  author_id = excluded.author_id;
 
 insert into public.profiles (user_id, name, email, role, profile_completion, created_at)
 select id, 'Admin', email, 'admin', 100, now()
