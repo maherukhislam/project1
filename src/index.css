@@ -1,28 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #f5f7fb;
-  --color-foreground: #0b1220;
-  --color-primary: #1a7fdb;
+  --color-background: #f4f3ef;
+  --color-foreground: #0f172a;
+  --color-primary: #0f766e;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #eef2f7;
+  --color-secondary: #eef2ef;
   --color-secondary-foreground: #334155;
-  --color-muted: #f3f6fb;
-  --color-muted-foreground: #5b6b83;
-  --color-accent: #eaf4ff;
-  --color-accent-foreground: #1d4ed8;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #667085;
+  --color-accent: #e8f7f4;
+  --color-accent-foreground: #115e59;
   --color-destructive: #ef4444;
-  --color-border: #dce3f0;
-  --color-ring: #38bdf8;
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --color-border: #d7ddd7;
+  --color-ring: #14b8a6;
+  --font-sans: 'Manrope', system-ui, sans-serif;
 }
 
 @font-face {
-  font-family: 'Plus Jakarta Sans';
+  font-family: 'Manrope';
   font-style: normal;
-  font-weight: 200 800;
+  font-weight: 300 800;
   font-display: swap;
-  src: url('https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4IA6-91aHEjcWuA_qU79TR_V.woff2') format('woff2');
+  src: url('https://fonts.gstatic.com/s/manrope/v15/xn7gYHE41ni1AdIRggexSvfedN4.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/sora/v12/xMQOuFFYT72X5wkB_18qmnndmSdSnk-NKQJDA8i1P4w.woff2') format('woff2');
 }
 
 html {
@@ -33,9 +41,9 @@ body {
   font-family: var(--font-sans);
   background-color: var(--color-background);
   background-image:
-    radial-gradient(1200px 800px at 15% 10%, rgba(56, 189, 248, 0.18), transparent 60%),
-    radial-gradient(1200px 800px at 85% 15%, rgba(99, 102, 241, 0.12), transparent 60%),
-    radial-gradient(1000px 800px at 50% 85%, rgba(14, 165, 233, 0.12), transparent 70%);
+    radial-gradient(1300px 900px at 12% 8%, rgba(20, 184, 166, 0.18), transparent 60%),
+    radial-gradient(1200px 900px at 92% 12%, rgba(56, 189, 248, 0.14), transparent 62%),
+    radial-gradient(900px 700px at 50% 88%, rgba(16, 185, 129, 0.08), transparent 72%);
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -93,7 +101,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -101,17 +109,21 @@ body {
 
 .bg-aurora {
   background-image:
-    radial-gradient(500px 300px at 20% 10%, rgba(125, 211, 252, 0.45), transparent 70%),
-    radial-gradient(600px 380px at 80% 15%, rgba(129, 140, 248, 0.45), transparent 70%),
-    radial-gradient(800px 500px at 50% 80%, rgba(56, 189, 248, 0.25), transparent 70%);
+    radial-gradient(500px 300px at 15% 8%, rgba(16, 185, 129, 0.35), transparent 70%),
+    radial-gradient(640px 420px at 85% 18%, rgba(45, 212, 191, 0.25), transparent 70%),
+    radial-gradient(900px 520px at 52% 84%, rgba(14, 165, 233, 0.2), transparent 72%);
 }
 
 .bg-grid {
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
+    linear-gradient(rgba(100, 116, 139, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 116, 139, 0.12) 1px, transparent 1px);
   background-size: 32px 32px;
   background-position: center;
+}
+
+.brand-display {
+  font-family: 'Sora', var(--font-sans);
 }
 
 /* Animations */

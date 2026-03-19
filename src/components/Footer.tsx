@@ -1,100 +1,90 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Compass, Mail, MapPin, Phone, Send } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
+    <footer className="relative mt-24 overflow-hidden border-t border-slate-200 bg-[linear-gradient(160deg,#0f172a,#111827_45%,#0b1220)] text-slate-200">
+      <div className="pointer-events-none absolute inset-0 opacity-40">
+        <div className="absolute -top-24 left-16 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute -bottom-32 right-10 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-6 py-16">
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1.1fr]">
           <div>
-            <Link to="/" className="flex items-center gap-2 mb-4">
-              <Globe className="w-8 h-8 text-sky-400" />
-              <span className="text-xl font-bold">StudyGlobal</span>
+            <Link to="/" className="inline-flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-cyan-300">
+                <Compass className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="brand-display block text-xl font-semibold tracking-tight text-white">StudyGlobal</span>
+                <span className="block text-[10px] uppercase tracking-[0.22em] text-slate-400">Admissions Platform</span>
+              </div>
             </Link>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Your trusted partner in international education. We help students achieve their dreams of studying abroad.
+            <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
+              A modern student admissions experience for discovering universities, managing documents, and tracking applications end-to-end.
             </p>
-            <div className="flex gap-3">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-sky-500 flex items-center justify-center transition-colors"
-                >
-                  <Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              {['About Us', 'Services', 'Universities', 'Scholarships', 'Blog', 'Contact'].map((link) => (
-                <li key={link}>
-                  <Link
-                    to={`/${link.toLowerCase().replace(' ', '-')}`}
-                    className="text-slate-400 hover:text-sky-400 text-sm transition-colors"
-                  >
-                    {link}
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Explore</h3>
+            <ul className="mt-4 space-y-2 text-sm">
+              {[
+                ['About', '/about'],
+                ['Services', '/services'],
+                ['Destinations', '/destinations'],
+                ['Universities', '/universities'],
+                ['Scholarships', '/scholarships'],
+                ['Blog', '/blog']
+              ].map(([label, path]) => (
+                <li key={path}>
+                  <Link to={path} className="text-slate-400 transition-colors hover:text-white">
+                    {label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Destinations */}
           <div>
-            <h3 className="font-semibold mb-4">Study Destinations</h3>
-            <ul className="space-y-2">
-              {['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands'].map((country) => (
-                <li key={country}>
-                  <Link
-                    to={`/destinations?country=${country}`}
-                    className="text-slate-400 hover:text-sky-400 text-sm transition-colors"
-                  >
-                    {country}
-                  </Link>
-                </li>
-              ))}
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Support</h3>
+            <ul className="mt-4 space-y-2 text-sm">
+              <li><Link to="/contact" className="text-slate-400 transition-colors hover:text-white">Contact</Link></li>
+              <li><Link to="/terms" className="text-slate-400 transition-colors hover:text-white">Terms</Link></li>
+              <li><Link to="/privacy" className="text-slate-400 transition-colors hover:text-white">Privacy</Link></li>
+              <li><Link to="/login" className="text-slate-400 transition-colors hover:text-white">Student Login</Link></li>
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h3 className="font-semibold mb-4">Contact Us</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
-                <span className="text-slate-400 text-sm">123 Education Street, New York, NY 10001</span>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">Get In Touch</h3>
+            <ul className="mt-4 space-y-3 text-sm text-slate-400">
+              <li className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 text-cyan-300" />
+                123 Education Street, New York, NY
               </li>
-              <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-sky-400 shrink-0" />
-                <span className="text-slate-400 text-sm">+1 (555) 123-4567</span>
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-cyan-300" />
+                +1 (555) 123-4567
               </li>
-              <li className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-sky-400 shrink-0" />
-                <span className="text-slate-400 text-sm">info@studyglobal.com</span>
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-cyan-300" />
+                info@studyglobal.com
               </li>
             </ul>
+            <Link
+              to="/contact"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100"
+            >
+              <Send className="h-4 w-4" />
+              Talk to Advisor
+            </Link>
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-400 text-sm">
-            (c) {new Date().getFullYear()} StudyGlobal. All rights reserved.
-          </p>
-          <div className="flex gap-6">
-            <Link to="/privacy" className="text-slate-400 hover:text-sky-400 text-sm transition-colors">
-              Privacy Policy
-            </Link>
-            <Link to="/terms" className="text-slate-400 hover:text-sky-400 text-sm transition-colors">
-              Terms of Service
-            </Link>
-          </div>
+        <div className="mt-12 border-t border-white/10 pt-6 text-xs text-slate-500">
+          (c) {new Date().getFullYear()} StudyGlobal. All rights reserved.
         </div>
       </div>
     </footer>
@@ -102,4 +92,3 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
-

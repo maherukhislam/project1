@@ -17,175 +17,66 @@ where s.id < s2.id
   and s.university_id = s2.university_id
   and s.name = s2.name;
 
-insert into public.countries (
-  name,
-  description,
-  flag_emoji,
-  image_url,
-  university_count,
-  avg_tuition,
-  intl_students,
-  popular_cities,
-  highlights
+with seed_countries as (
+  select *
+  from (values
+    ('United States', 'Home to world-leading research institutions and a flexible education system.', 'US', 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop', 1200, 35000, '1,000,000+', 'New York, Boston, Chicago, San Francisco', 'Top-ranked universities, diverse campuses, strong research'),
+    ('United Kingdom', 'Historic universities with globally recognized degrees and strong career outcomes.', 'UK', 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop', 160, 28000, '500,000+', 'London, Manchester, Edinburgh, Birmingham', 'One-year masters, global reputation, vibrant cities'),
+    ('Canada', 'High-quality education with a welcoming, multicultural environment.', 'CA', 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=1600&auto=format&fit=crop', 100, 24000, '400,000+', 'Toronto, Vancouver, Montreal, Ottawa', 'Post-study work options, safe cities, strong STEM'),
+    ('Australia', 'Top universities, excellent student support, and a strong job market.', 'AU', 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop', 120, 26000, '700,000+', 'Sydney, Melbourne, Brisbane, Perth', 'High quality of life, research excellence, coastal lifestyle'),
+    ('Germany', 'Affordable education with world-class engineering and research.', 'DE', 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop', 90, 8000, '350,000+', 'Berlin, Munich, Hamburg, Frankfurt', 'Low tuition, strong industry links, innovation hubs'),
+    ('Netherlands', 'English-taught programs and a strong international student community.', 'NL', 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=1600&auto=format&fit=crop', 60, 18000, '120,000+', 'Amsterdam, Rotterdam, Utrecht, Eindhoven', 'English programs, innovative teaching, EU access')
+  ) as t(name, description, flag_emoji, image_url, university_count, avg_tuition, intl_students, popular_cities, highlights)
+),
+updated as (
+  update public.countries c
+  set
+    description = s.description,
+    flag_emoji = s.flag_emoji,
+    image_url = s.image_url,
+    university_count = s.university_count,
+    avg_tuition = s.avg_tuition,
+    intl_students = s.intl_students,
+    popular_cities = s.popular_cities,
+    highlights = s.highlights
+  from seed_countries s
+  where c.name = s.name
+  returning c.name
 )
-values
-  (
-    'United States',
-    'Home to world-leading research institutions and a flexible education system.',
-    'US',
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop',
-    1200,
-    35000,
-    '1,000,000+',
-    'New York, Boston, Chicago, San Francisco',
-    'Top-ranked universities, diverse campuses, strong research'
-  ),
-  (
-    'United Kingdom',
-    'Historic universities with globally recognized degrees and strong career outcomes.',
-    'UK',
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop',
-    160,
-    28000,
-    '500,000+',
-    'London, Manchester, Edinburgh, Birmingham',
-    'One-year masters, global reputation, vibrant cities'
-  ),
-  (
-    'Canada',
-    'High-quality education with a welcoming, multicultural environment.',
-    'CA',
-    'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=1600&auto=format&fit=crop',
-    100,
-    24000,
-    '400,000+',
-    'Toronto, Vancouver, Montreal, Ottawa',
-    'Post-study work options, safe cities, strong STEM'
-  ),
-  (
-    'Australia',
-    'Top universities, excellent student support, and a strong job market.',
-    'AU',
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop',
-    120,
-    26000,
-    '700,000+',
-    'Sydney, Melbourne, Brisbane, Perth',
-    'High quality of life, research excellence, coastal lifestyle'
-  ),
-  (
-    'Germany',
-    'Affordable education with world-class engineering and research.',
-    'DE',
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1600&auto=format&fit=crop',
-    90,
-    8000,
-    '350,000+',
-    'Berlin, Munich, Hamburg, Frankfurt',
-    'Low tuition, strong industry links, innovation hubs'
-  ),
-  (
-    'Netherlands',
-    'English-taught programs and a strong international student community.',
-    'NL',
-    'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=1600&auto=format&fit=crop',
-    60,
-    18000,
-    '120,000+',
-    'Amsterdam, Rotterdam, Utrecht, Eindhoven',
-    'English programs, innovative teaching, EU access'
-  )
-on conflict (name) do update
-set
-  description = excluded.description,
-  flag_emoji = excluded.flag_emoji,
-  image_url = excluded.image_url,
-  university_count = excluded.university_count,
-  avg_tuition = excluded.avg_tuition,
-  intl_students = excluded.intl_students,
-  popular_cities = excluded.popular_cities,
-  highlights = excluded.highlights;
+insert into public.countries (name, description, flag_emoji, image_url, university_count, avg_tuition, intl_students, popular_cities, highlights)
+select s.name, s.description, s.flag_emoji, s.image_url, s.university_count, s.avg_tuition, s.intl_students, s.popular_cities, s.highlights
+from seed_countries s
+where not exists (select 1 from public.countries c where c.name = s.name);
 
-insert into public.universities (
-  name,
-  country,
-  description,
-  ranking,
-  logo_url,
-  tuition_min,
-  tuition_max,
-  acceptance_rate
+with seed_universities as (
+  select *
+  from (values
+    ('Harvard University', 'United States', 'An Ivy League institution known for excellence across disciplines.', 1, 'https://upload.wikimedia.org/wikipedia/en/2/29/Harvard_shield_wreath.svg', 45000, 55000, 4.0),
+    ('University of Oxford', 'United Kingdom', 'Historic university with world-leading research and teaching.', 2, 'https://upload.wikimedia.org/wikipedia/en/d/d1/Oxford_University_Circlet.svg', 32000, 44000, 17.0),
+    ('University of Toronto', 'Canada', 'Top-ranked Canadian university with strong global reputation.', 18, 'https://upload.wikimedia.org/wikipedia/en/0/0b/UofT_Logo.svg', 22000, 36000, 43.0),
+    ('University of Melbourne', 'Australia', 'Leading Australian university with comprehensive programs.', 14, 'https://upload.wikimedia.org/wikipedia/en/4/49/University_of_Melbourne_coat_of_arms.svg', 24000, 38000, 30.0),
+    ('Technical University of Munich', 'Germany', 'Renowned for engineering and innovation with strong industry ties.', 28, 'https://upload.wikimedia.org/wikipedia/commons/9/9e/TUM_Logo.svg', 1000, 6000, 20.0),
+    ('Delft University of Technology', 'Netherlands', 'Top technical university with strong engineering programs.', 47, 'https://upload.wikimedia.org/wikipedia/en/2/2d/TU_Delft_logo.svg', 11000, 19000, 25.0)
+  ) as t(name, country, description, ranking, logo_url, tuition_min, tuition_max, acceptance_rate)
+),
+updated as (
+  update public.universities u
+  set
+    country = s.country,
+    description = s.description,
+    ranking = s.ranking,
+    logo_url = s.logo_url,
+    tuition_min = s.tuition_min,
+    tuition_max = s.tuition_max,
+    acceptance_rate = s.acceptance_rate
+  from seed_universities s
+  where u.name = s.name
+  returning u.name
 )
-values
-  (
-    'Harvard University',
-    'United States',
-    'An Ivy League institution known for excellence across disciplines.',
-    1,
-    'https://upload.wikimedia.org/wikipedia/en/2/29/Harvard_shield_wreath.svg',
-    45000,
-    55000,
-    4.0
-  ),
-  (
-    'University of Oxford',
-    'United Kingdom',
-    'Historic university with world-leading research and teaching.',
-    2,
-    'https://upload.wikimedia.org/wikipedia/en/d/d1/Oxford_University_Circlet.svg',
-    32000,
-    44000,
-    17.0
-  ),
-  (
-    'University of Toronto',
-    'Canada',
-    'Top-ranked Canadian university with strong global reputation.',
-    18,
-    'https://upload.wikimedia.org/wikipedia/en/0/0b/UofT_Logo.svg',
-    22000,
-    36000,
-    43.0
-  ),
-  (
-    'University of Melbourne',
-    'Australia',
-    'Leading Australian university with comprehensive programs.',
-    14,
-    'https://upload.wikimedia.org/wikipedia/en/4/49/University_of_Melbourne_coat_of_arms.svg',
-    24000,
-    38000,
-    30.0
-  ),
-  (
-    'Technical University of Munich',
-    'Germany',
-    'Renowned for engineering and innovation with strong industry ties.',
-    28,
-    'https://upload.wikimedia.org/wikipedia/commons/9/9e/TUM_Logo.svg',
-    1000,
-    6000,
-    20.0
-  ),
-  (
-    'Delft University of Technology',
-    'Netherlands',
-    'Top technical university with strong engineering programs.',
-    47,
-    'https://upload.wikimedia.org/wikipedia/en/2/2d/TU_Delft_logo.svg',
-    11000,
-    19000,
-    25.0
-  )
-on conflict (name) do update
-set
-  country = excluded.country,
-  description = excluded.description,
-  ranking = excluded.ranking,
-  logo_url = excluded.logo_url,
-  tuition_min = excluded.tuition_min,
-  tuition_max = excluded.tuition_max,
-  acceptance_rate = excluded.acceptance_rate;
+insert into public.universities (name, country, description, ranking, logo_url, tuition_min, tuition_max, acceptance_rate)
+select s.name, s.country, s.description, s.ranking, s.logo_url, s.tuition_min, s.tuition_max, s.acceptance_rate
+from seed_universities s
+where not exists (select 1 from public.universities u where u.name = s.name);
 
 insert into public.programs (
   university_id,
