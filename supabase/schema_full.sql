@@ -21,6 +21,7 @@ create table if not exists public.profiles (
   user_id uuid not null unique references auth.users(id) on delete cascade,
   name text not null,
   email text not null,
+  profile_picture_url text,
   phone text,
   nationality text,
   preferred_country text,
@@ -197,6 +198,7 @@ create table if not exists public.audit_logs (
 );
 
 alter table public.profiles
+  add column if not exists profile_picture_url text,
   add column if not exists gpa_scale numeric(4,2),
   add column if not exists academic_system text,
   add column if not exists medium_of_instruction text,

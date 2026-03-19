@@ -81,7 +81,7 @@ export async function onRequest(context) {
 
       let query = supabase
         .from('profiles')
-        .select(minimal ? 'id, user_id, name, email, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags' : '*')
+        .select(minimal ? 'id, user_id, name, email, profile_picture_url, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags' : '*')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 

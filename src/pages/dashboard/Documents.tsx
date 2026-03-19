@@ -5,6 +5,7 @@ import GlassCard from '../../components/GlassCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
+import supabase from '../../lib/supabase';
 
 const Documents: React.FC = () => {
   const { profile } = useAuth();
@@ -39,14 +40,28 @@ const Documents: React.FC = () => {
     setUploading(true);
     setUploadMessage('');
     try {
-      // In production, this would upload to R2/S3 first
-      const fakeUrl = `https://storage.example.com/${Date.now()}-${file.name}`;
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('You must be logged in.');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('kind', 'document');
+      formData.append('document_type', type);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData
+      });
+      const uploadPayload = await uploadResponse.json();
+      if (!uploadResponse.ok) throw new Error(uploadPayload?.error || 'Upload failed.');
+
       await api.post('/api/documents', {
         document_type: type,
         file_name: file.name,
-        file_url: fakeUrl,
-        file_size: file.size
+        file_url: uploadPayload.url,
+        file_size: file.size,
+        mime_type: uploadPayload.mime_type
       });
 
       // Refresh documents

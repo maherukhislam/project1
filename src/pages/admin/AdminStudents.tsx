@@ -13,10 +13,12 @@ import {
   Eye,
   User,
   CheckCircle,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
+import supabase from '../../lib/supabase';
 
 const stageOrder = ['new_lead', 'profile_ready', 'applied', 'review', 'visa'] as const;
 
@@ -57,6 +59,7 @@ const AdminStudents: React.FC = () => {
   const [stageFilter, setStageFilter] = useState<(typeof stageOrder)[number] | 'all'>('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'applications'>('profile');
+  const [downloadingReport, setDownloadingReport] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -138,6 +141,37 @@ const AdminStudents: React.FC = () => {
       );
     } catch (err) {
       console.error('Failed to update status:', err);
+    }
+  };
+
+  const downloadStudentPdf = async () => {
+    if (!selectedStudent?.user_id) return;
+    setDownloadingReport(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Unauthorized');
+
+      const response = await fetch(`/api/admin/students-report?user_id=${encodeURIComponent(selectedStudent.user_id)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Failed to generate report');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${(selectedStudent.name || 'student').replace(/[^\w.-]/g, '_')}-profile-report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download report:', err);
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -266,7 +300,11 @@ const AdminStudents: React.FC = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-base font-semibold text-white">
-                        {student.name?.charAt(0) || 'S'}
+                        {student.profile_picture_url ? (
+                          <img src={student.profile_picture_url} alt={student.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          student.name?.charAt(0) || 'S'
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-white">{student.name || 'Unknown student'}</p>
@@ -321,7 +359,11 @@ const AdminStudents: React.FC = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-lg font-bold text-white">
-                      {selectedStudent.name?.charAt(0) || 'S'}
+                      {selectedStudent.profile_picture_url ? (
+                        <img src={selectedStudent.profile_picture_url} alt={selectedStudent.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        selectedStudent.name?.charAt(0) || 'S'
+                      )}
                     </div>
                     <div>
                       <p className="text-xl font-bold text-white">{selectedStudent.name}</p>
@@ -338,6 +380,15 @@ const AdminStudents: React.FC = () => {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={downloadStudentPdf}
+                    disabled={downloadingReport}
+                    className="inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-70"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {downloadingReport ? 'Generating PDF...' : 'Download PDF'}
+                  </button>
                   <span className={`rounded-full border px-3 py-1 text-xs font-medium ${selectedStage ? stageMeta[selectedStage].tone : 'bg-slate-500/20 text-slate-300 border-slate-500/30'}`}>
                     {selectedStage ? stageMeta[selectedStage].label : 'New lead'}
                   </span>

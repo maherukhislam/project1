@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, CheckCircle, Save, ShieldAlert, User } from 'lucide-react';
+import { AlertCircle, CheckCircle, Save, ShieldAlert, Upload, User } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
+import supabase from '../../lib/supabase';
 
 const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands', 'France', 'Ireland', 'New Zealand', 'Singapore'];
 const nationalities = ['American', 'British', 'Canadian', 'Chinese', 'Indian', 'Nigerian', 'Pakistani', 'Bangladeshi', 'Vietnamese', 'Indonesian', 'Other'];
@@ -38,6 +39,7 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState(emptyForm);
 
@@ -107,6 +109,37 @@ const Profile: React.FC = () => {
     }
   };
 
+  const uploadProfilePicture = async (file: File) => {
+    setUploadingPhoto(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('You must be logged in.');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('kind', 'profile_picture');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Profile picture upload failed.');
+
+      await api.put('/api/profile', { profile_picture_url: payload.url });
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('Profile picture upload failed:', err);
+      setError(err instanceof Error ? err.message : 'Profile picture upload failed');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const fieldHint = (field: string) =>
     validationErrors[field] ? <p className="mt-2 text-xs text-red-600">{validationErrors[field]}</p> : null;
 
@@ -163,6 +196,35 @@ const Profile: React.FC = () => {
             Basic Information
           </h2>
           <div className="grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Profile Picture</label>
+              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white/60 p-4">
+                <div className="h-16 w-16 overflow-hidden rounded-full bg-slate-200">
+                  {profile?.profile_picture_url ? (
+                    <img src={profile.profile_picture_url} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-slate-500">
+                      <User className="h-6 w-6" />
+                    </div>
+                  )}
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-sky-400 hover:text-sky-700">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadProfilePicture(file);
+                    }}
+                    disabled={uploadingPhoto}
+                  />
+                  {uploadingPhoto ? <LoadingSpinner size="sm" /> : <Upload className="h-4 w-4" />}
+                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                </label>
+                <p className="text-xs text-slate-500">JPG, PNG, or WebP recommended.</p>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
               <input value={formData.name} onChange={(e) => setField('name', e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20" />

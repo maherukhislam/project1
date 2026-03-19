@@ -88,14 +88,14 @@ export async function onRequest(context) {
     const body = await request.json();
 
     if (request.method === 'POST') {
-      const { document_type, file_name, file_url, file_size } = body;
+      const { document_type, file_name, file_url, file_size, mime_type } = body;
       const validationError = validateDocumentUpload(document_type, file_name, file_size);
       if (validationError) {
         return new Response(JSON.stringify({ error: validationError }), { status: 400, headers });
       }
       const { data, error } = await supabase
         .from('documents')
-        .insert({ user_id: user.id, document_type, file_name, file_url, file_size, status: 'pending' })
+        .insert({ user_id: user.id, document_type, file_name, file_url, file_size, mime_type, status: 'pending' })
         .select()
         .single();
       if (error) throw error;

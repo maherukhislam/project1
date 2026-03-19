@@ -14,6 +14,7 @@ interface Profile {
   user_id: string;
   name: string;
   email: string;
+  profile_picture_url?: string;
   phone?: string;
   nationality?: string;
   preferred_country?: string;
