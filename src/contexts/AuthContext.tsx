@@ -27,6 +27,8 @@ interface Profile {
   last_education_year?: number;
   study_level?: string;
   preferred_subject?: string;
+  preferred_intake_name?: string;
+  preferred_intake_year?: number;
   budget_min?: number;
   budget_max?: number;
   intake?: string;

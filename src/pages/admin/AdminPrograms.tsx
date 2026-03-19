@@ -4,6 +4,44 @@ import { BookOpen, Plus, Search, Edit2, Trash2, X, Save, Award } from 'lucide-re
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 
+const emptyIntake = () => ({
+  name: '',
+  year: '',
+  application_deadline: '',
+  start_date: '',
+  status: 'Upcoming'
+});
+
+const normalizeProgramIntakes = (program: any) => {
+  if (Array.isArray(program?.intakes) && program.intakes.length) {
+    return program.intakes.map((item: any) => ({
+      name: item?.name || '',
+      year: item?.year?.toString() || '',
+      application_deadline: item?.application_deadline ? String(item.application_deadline).slice(0, 10) : '',
+      start_date: item?.start_date ? String(item.start_date).slice(0, 10) : '',
+      status: item?.status || 'Upcoming'
+    }));
+  }
+
+  const labels = String(program?.intake_periods || '')
+    .split(',')
+    .map((item: string) => item.trim())
+    .filter(Boolean);
+
+  if (!labels.length) return [emptyIntake()];
+
+  return labels.map((label: string) => {
+    const match = label.match(/^(Spring|Summer|Fall|Winter)(?:\s+(\d{4}))?$/i);
+    return {
+      name: match?.[1] || label,
+      year: match?.[2] || '',
+      application_deadline: '',
+      start_date: '',
+      status: 'Upcoming'
+    };
+  });
+};
+
 const AdminPrograms: React.FC = () => {
   const [programs, setPrograms] = useState<any[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
@@ -21,7 +59,7 @@ const AdminPrograms: React.FC = () => {
     tuition_fee: '',
     min_gpa_required: '',
     min_english_score: '',
-    intake_periods: '',
+    intakes: [emptyIntake()],
     scholarship_available: false
   });
 
@@ -55,7 +93,7 @@ const AdminPrograms: React.FC = () => {
       tuition_fee: '',
       min_gpa_required: '',
       min_english_score: '',
-      intake_periods: '',
+      intakes: [emptyIntake()],
       scholarship_available: false
     });
     setEditing(null);
@@ -71,9 +109,21 @@ const AdminPrograms: React.FC = () => {
         name: formData.name,
         degree_level: formData.degree_level,
         duration: formData.duration,
-        intake_periods: formData.intake_periods,
         scholarship_available: formData.scholarship_available
       };
+      const normalizedIntakes = formData.intakes
+        .filter((item) => item.name && item.year)
+        .map((item) => ({
+          name: item.name,
+          year: parseInt(item.year, 10),
+          application_deadline: item.application_deadline ? new Date(`${item.application_deadline}T00:00:00Z`).toISOString() : null,
+          start_date: item.start_date ? new Date(`${item.start_date}T00:00:00Z`).toISOString() : null,
+          status: item.status
+        }));
+
+      payload.intakes = normalizedIntakes;
+      payload.intake_periods = normalizedIntakes.map((item) => `${item.name} ${item.year}`).join(', ');
+      if (normalizedIntakes[0]?.application_deadline) payload.application_deadline = normalizedIntakes[0].application_deadline;
       if (formData.tuition_fee) payload.tuition_fee = parseInt(formData.tuition_fee);
       if (formData.min_gpa_required) payload.min_gpa_required = parseFloat(formData.min_gpa_required);
       if (formData.min_english_score) payload.min_english_score = parseFloat(formData.min_english_score);
@@ -104,10 +154,28 @@ const AdminPrograms: React.FC = () => {
       tuition_fee: prog.tuition_fee?.toString() || '',
       min_gpa_required: prog.min_gpa_required?.toString() || '',
       min_english_score: prog.min_english_score?.toString() || '',
-      intake_periods: prog.intake_periods || '',
+      intakes: normalizeProgramIntakes(prog),
       scholarship_available: prog.scholarship_available || false
     });
     setShowModal(true);
+  };
+
+  const updateIntake = (index: number, field: string, value: string) => {
+    setFormData((current) => ({
+      ...current,
+      intakes: current.intakes.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item))
+    }));
+  };
+
+  const addIntake = () => {
+    setFormData((current) => ({ ...current, intakes: [...current.intakes, emptyIntake()] }));
+  };
+
+  const removeIntake = (index: number) => {
+    setFormData((current) => ({
+      ...current,
+      intakes: current.intakes.length === 1 ? [emptyIntake()] : current.intakes.filter((_, itemIndex) => itemIndex !== index)
+    }));
   };
 
   const handleDelete = async (id: number) => {
@@ -205,6 +273,11 @@ const AdminPrograms: React.FC = () => {
                       <div>
                         <p className="text-white font-medium">{prog.name}</p>
                         <p className="text-slate-400 text-sm md:hidden">{prog.universities?.name}</p>
+                        <p className="text-slate-500 text-xs mt-1">
+                          {(prog.intakes || []).length
+                            ? prog.intakes.map((item: any) => `${item.name} ${item.year}`).join(', ')
+                            : (prog.intake_periods || 'No intake data')}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -382,15 +455,76 @@ const AdminPrograms: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Intake Periods</label>
-                  <input
-                    type="text"
-                    value={formData.intake_periods}
-                    onChange={(e) => setFormData({ ...formData, intake_periods: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:border-sky-500 outline-none"
-                    placeholder="e.g., Fall, Spring"
-                  />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-slate-400">Program Intakes</label>
+                    <button
+                      type="button"
+                      onClick={addIntake}
+                      className="text-sm text-cyan-400 hover:text-cyan-300"
+                    >
+                      Add intake
+                    </button>
+                  </div>
+                  {formData.intakes.map((intake, index) => (
+                    <div key={`${index}-${intake.name}-${intake.year}`} className="rounded-xl border border-slate-700 bg-slate-900/30 p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <select
+                          value={intake.name}
+                          onChange={(e) => updateIntake(index, 'name', e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white focus:border-sky-500 outline-none"
+                        >
+                          <option value="">Season</option>
+                          {['Spring', 'Summer', 'Fall', 'Winter'].map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                        <input
+                          type="number"
+                          min={new Date().getFullYear()}
+                          max={new Date().getFullYear() + 4}
+                          value={intake.year}
+                          onChange={(e) => updateIntake(index, 'year', e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:border-sky-500 outline-none"
+                          placeholder="Year"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-2">Application deadline</label>
+                          <input
+                            type="date"
+                            value={intake.application_deadline}
+                            onChange={(e) => updateIntake(index, 'application_deadline', e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white focus:border-sky-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-2">Start date</label>
+                          <input
+                            type="date"
+                            value={intake.start_date}
+                            onChange={(e) => updateIntake(index, 'start_date', e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white focus:border-sky-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <select
+                          value={intake.status}
+                          onChange={(e) => updateIntake(index, 'status', e.target.value)}
+                          className="flex-1 px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white focus:border-sky-500 outline-none"
+                        >
+                          {['Open', 'Upcoming', 'Closed'].map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeIntake(index)}
+                          className="px-3 py-3 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <label className="flex items-center gap-3 p-4 rounded-xl bg-slate-700/30 cursor-pointer">

@@ -220,7 +220,7 @@ const DashboardHome: React.FC = () => {
                 {[
                   { label: 'Academics', ready: Boolean(profile?.gpa && profile?.study_level && profile?.academic_system) },
                   { label: 'Preferences', ready: Boolean(profile?.preferred_country && profile?.preferred_subject && profile?.medium_of_instruction) },
-                  { label: 'Budget & Intake', ready: Boolean(profile?.budget_max && profile?.intake && profile?.last_education_year) }
+                  { label: 'Budget & Intake', ready: Boolean(profile?.budget_max && (profile?.preferred_intake_name || profile?.intake) && (profile?.preferred_intake_year || profile?.intake) && profile?.last_education_year) }
                 ].map((item) => (
                   <div
                     key={item.label}

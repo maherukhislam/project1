@@ -7,7 +7,10 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 
-const defaultIntake = (profileIntake?: string) => profileIntake || 'Fall 2026';
+const defaultIntake = (profile?: { intake?: string; preferred_intake_name?: string; preferred_intake_year?: number }) =>
+  profile?.intake || (profile?.preferred_intake_name && profile?.preferred_intake_year
+    ? `${profile.preferred_intake_name} ${profile.preferred_intake_year}`
+    : 'Fall 2026');
 
 const UniversityMatch: React.FC = () => {
   const { profile } = useAuth();
@@ -29,7 +32,10 @@ const UniversityMatch: React.FC = () => {
           budget_max: profile.budget_max,
           preferred_country: profile.preferred_country,
           preferred_subject: profile.preferred_subject,
-          study_level: profile.study_level
+          study_level: profile.study_level,
+          preferred_intake_name: profile.preferred_intake_name,
+          preferred_intake_year: profile.preferred_intake_year,
+          intake: profile.intake
         });
         setMatches(data.matches || []);
         setMatchMeta(data.meta || null);
@@ -48,7 +54,7 @@ const UniversityMatch: React.FC = () => {
     try {
       await api.post('/api/applications', {
         program_id: programId,
-        intake: defaultIntake(profile?.intake),
+        intake: defaultIntake(profile || undefined),
         notes: 'Created from match recommendations'
       });
       setCreatedProgramIds((current) => [...current, programId]);

@@ -5,6 +5,9 @@ const CURRENT_YEAR =
   2026;
 const MIN_LAST_EDUCATION_YEAR = 1980;
 const MAX_LAST_EDUCATION_YEAR = CURRENT_YEAR + 2;
+const MIN_PREFERRED_INTAKE_YEAR = CURRENT_YEAR - 1;
+const MAX_PREFERRED_INTAKE_YEAR = CURRENT_YEAR + 4;
+const INTAKE_NAMES = ['Spring', 'Summer', 'Fall', 'Winter'];
 
 export const PROFILE_REQUIRED_FIELDS = [
   'name',
@@ -20,7 +23,8 @@ export const PROFILE_REQUIRED_FIELDS = [
   'preferred_subject',
   'budget_min',
   'budget_max',
-  'intake',
+  'preferred_intake_name',
+  'preferred_intake_year',
   'last_education_year'
 ];
 
@@ -71,6 +75,49 @@ const daysUntil = (value) => {
   if (!date || Number.isNaN(date.getTime())) return null;
   return Math.ceil((date.getTime() - Date.now()) / 86400000);
 };
+
+function normalizeIntakeName(value) {
+  if (!value) return null;
+  const normalized = String(value).trim().toLowerCase();
+  return INTAKE_NAMES.find((item) => item.toLowerCase() === normalized) || null;
+}
+
+function parseLegacyIntakeLabel(value) {
+  if (!value) return { name: null, year: null };
+  const match = String(value).trim().match(/^(Spring|Summer|Fall|Winter)(?:\s+(\d{4}))?$/i);
+  if (!match) return { name: null, year: null };
+  return {
+    name: normalizeIntakeName(match[1]),
+    year: match[2] ? Number(match[2]) : null
+  };
+}
+
+function formatIntakeLabel(name, year) {
+  if (!name) return null;
+  return year ? `${name} ${year}` : name;
+}
+
+function getProfileIntakePreference(profile = {}) {
+  const legacy = parseLegacyIntakeLabel(profile.intake);
+  const name = normalizeIntakeName(profile.preferred_intake_name) || legacy.name;
+  const year = readNumber(profile.preferred_intake_year) ?? legacy.year;
+
+  return {
+    name,
+    year,
+    intake: formatIntakeLabel(name, year)
+  };
+}
+
+function withNormalizedProfileIntake(profile = {}) {
+  const preference = getProfileIntakePreference(profile);
+  return {
+    ...profile,
+    preferred_intake_name: preference.name,
+    preferred_intake_year: preference.year,
+    intake: preference.intake
+  };
+}
 
 export function normalizeScalarList(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -187,17 +234,19 @@ export function getDocumentRequirements(profile = {}) {
 }
 
 export function validateProfileInput(profile = {}) {
+  const normalizedProfile = withNormalizedProfileIntake(profile);
   const errors = {};
-  const budgetMin = readNumber(profile.budget_min);
-  const budgetMax = readNumber(profile.budget_max);
-  const gpa = readNumber(profile.gpa);
-  const gpaScale = readNumber(profile.gpa_scale);
-  const englishScore = readNumber(profile.english_score);
-  const lastEducationYear = readNumber(profile.last_education_year);
-  const testType = profile.english_test_type;
+  const budgetMin = readNumber(normalizedProfile.budget_min);
+  const budgetMax = readNumber(normalizedProfile.budget_max);
+  const gpa = readNumber(normalizedProfile.gpa);
+  const gpaScale = readNumber(normalizedProfile.gpa_scale);
+  const englishScore = readNumber(normalizedProfile.english_score);
+  const lastEducationYear = readNumber(normalizedProfile.last_education_year);
+  const preferredIntakeYear = readNumber(normalizedProfile.preferred_intake_year);
+  const testType = normalizedProfile.english_test_type;
 
   PROFILE_REQUIRED_FIELDS.forEach((field) => {
-    const value = profile[field];
+    const value = normalizedProfile[field];
     if (value === null || value === undefined || value === '') errors[field] = 'This field is required.';
   });
 
@@ -225,9 +274,25 @@ export function validateProfileInput(profile = {}) {
     errors.last_education_year = `Last education year must be between ${MIN_LAST_EDUCATION_YEAR} and ${MAX_LAST_EDUCATION_YEAR}.`;
   }
 
-  const allowedStudyLevels = EDUCATION_TO_STUDY_LEVEL[profile.education_level] || [];
-  if (profile.education_level && profile.study_level && allowedStudyLevels.length && !allowedStudyLevels.includes(profile.study_level)) {
-    errors.study_level = `${profile.education_level} does not qualify directly for ${profile.study_level}.`;
+  if (normalizedProfile.preferred_intake_name && !INTAKE_NAMES.includes(normalizedProfile.preferred_intake_name)) {
+    errors.preferred_intake_name = `Preferred intake must be one of: ${INTAKE_NAMES.join(', ')}.`;
+  }
+
+  if (
+    preferredIntakeYear !== null &&
+    (preferredIntakeYear < MIN_PREFERRED_INTAKE_YEAR || preferredIntakeYear > MAX_PREFERRED_INTAKE_YEAR)
+  ) {
+    errors.preferred_intake_year = `Preferred intake year must be between ${MIN_PREFERRED_INTAKE_YEAR} and ${MAX_PREFERRED_INTAKE_YEAR}.`;
+  }
+
+  const allowedStudyLevels = EDUCATION_TO_STUDY_LEVEL[normalizedProfile.education_level] || [];
+  if (
+    normalizedProfile.education_level &&
+    normalizedProfile.study_level &&
+    allowedStudyLevels.length &&
+    !allowedStudyLevels.includes(normalizedProfile.study_level)
+  ) {
+    errors.study_level = `${normalizedProfile.education_level} does not qualify directly for ${normalizedProfile.study_level}.`;
   }
 
   return errors;
@@ -246,31 +311,32 @@ function getBudgetRealism(profile = {}, profileState = null) {
 }
 
 export function computeProfileState(profile = {}) {
-  const countryRules = deriveCountryRules(profile.preferred_country);
-  const validation_errors = validateProfileInput(profile);
-  const englishTestRequired = shouldRequireEnglishTest(profile, countryRules);
+  const normalizedProfile = withNormalizedProfileIntake(profile);
+  const countryRules = deriveCountryRules(normalizedProfile.preferred_country);
+  const validation_errors = validateProfileInput(normalizedProfile);
+  const englishTestRequired = shouldRequireEnglishTest(normalizedProfile, countryRules);
   const requiredFields = [...PROFILE_REQUIRED_FIELDS];
   if (englishTestRequired) requiredFields.push('english_test_type', 'english_score');
 
   const validRequiredFields = requiredFields.filter((field) => {
-    const value = profile[field];
+    const value = normalizedProfile[field];
     return value !== null && value !== undefined && value !== '' && !validation_errors[field];
   });
 
   const completion_percentage = Math.round((validRequiredFields.length / requiredFields.length) * 100);
-  const normalized_gpa = normalizeGpa(profile);
-  const normalized_english = normalizeEnglishScore(profile.english_test_type, profile.english_score);
-  const gap_years = calculateGapYears(profile);
+  const normalized_gpa = normalizeGpa(normalizedProfile);
+  const normalized_english = normalizeEnglishScore(normalizedProfile.english_test_type, normalizedProfile.english_score);
+  const gap_years = calculateGapYears(normalizedProfile);
   const blocking_reasons = [];
   const improvement_flags = [];
 
   if (Object.keys(validation_errors).length) blocking_reasons.push('Profile has validation errors.');
   if (completion_percentage < 100) blocking_reasons.push('Required profile fields are incomplete.');
-  if (englishTestRequired && (!profile.english_test_type || readNumber(profile.english_score) === null)) {
+  if (englishTestRequired && (!normalizedProfile.english_test_type || readNumber(normalizedProfile.english_score) === null)) {
     blocking_reasons.push('English test details are required for your profile.');
   }
   if (gap_years !== null && gap_years > countryRules.max_gap_years) {
-    improvement_flags.push(`Study gap exceeds ${countryRules.max_gap_years} years for ${profile.preferred_country || 'the selected country'} and may need conditional review.`);
+    improvement_flags.push(`Study gap exceeds ${countryRules.max_gap_years} years for ${normalizedProfile.preferred_country || 'the selected country'} and may need conditional review.`);
   } else if (gap_years !== null && gap_years > countryRules.gap_risk_threshold) {
     improvement_flags.push('Study gap is above the low-risk range and may require explanation.');
   }
@@ -282,7 +348,7 @@ export function computeProfileState(profile = {}) {
   }
 
   return {
-    ...profile,
+    ...normalizedProfile,
     normalized_gpa,
     normalized_english,
     gap_years,
@@ -295,8 +361,8 @@ export function computeProfileState(profile = {}) {
       valid_required_fields: validRequiredFields,
       missing_required_fields: requiredFields.filter((field) => !validRequiredFields.includes(field))
     },
-    document_requirements: getDocumentRequirements(profile),
-    budget_realism: getBudgetRealism(profile, { normalized_gpa }),
+    document_requirements: getDocumentRequirements(normalizedProfile),
+    budget_realism: getBudgetRealism(normalizedProfile, { normalized_gpa }),
     blocking_reasons,
     improvement_flags
   };
@@ -435,25 +501,114 @@ export function validateDocumentUpload(documentType, fileName, fileSize) {
 }
 
 function parseProgramIntakes(program) {
-  return normalizeScalarList(program.intake_periods);
+  if (Array.isArray(program.intakes) && program.intakes.length) {
+    return program.intakes
+      .map((item, index) => {
+        const name = normalizeIntakeName(item?.name);
+        const year = readNumber(item?.year);
+        if (!name || year === null) return null;
+
+        return {
+          key: item?.key || `${name}-${year}-${index}`,
+          name,
+          year,
+          label: formatIntakeLabel(name, year),
+          application_deadline: item?.application_deadline || null,
+          start_date: item?.start_date || null,
+          status: ['Open', 'Closed', 'Upcoming'].includes(item?.status) ? item.status : null
+        };
+      })
+      .filter(Boolean);
+  }
+
+  return normalizeScalarList(program.intake_periods)
+    .map((item, index) => {
+      const parsed = parseLegacyIntakeLabel(item);
+      const name = parsed.name || normalizeIntakeName(item);
+      if (!name) return null;
+      const year = parsed.year || CURRENT_YEAR;
+
+      return {
+        key: `${name}-${year}-${index}`,
+        name,
+        year,
+        label: formatIntakeLabel(name, year),
+        application_deadline: program.application_deadline || null,
+        start_date: null,
+        status: null
+      };
+    })
+    .filter(Boolean);
 }
 
-function intakeMatchDetails(preferredIntake, program) {
-  const programIntakes = parseProgramIntakes(program);
-  if (!preferredIntake) return { matched: true, nearest: programIntakes[0] || null, weight: 3, reason: 'Flexible intake preference' };
-  if (programIntakes.includes(preferredIntake)) return { matched: true, nearest: preferredIntake, weight: 5, reason: 'Preferred intake available' };
+function intakeStatusRank(status) {
+  if (status === 'Open') return 0;
+  if (status === 'Upcoming') return 1;
+  if (status === 'Closed') return 3;
+  return 2;
+}
 
-  const preferredSeason = preferredIntake.split(' ')[0];
-  const sameSeason = programIntakes.find((item) => item.startsWith(preferredSeason));
-  if (sameSeason) return { matched: false, nearest: sameSeason, weight: 3, reason: `Nearest intake is ${sameSeason}` };
+function isIntakeAvailable(intake) {
+  if (intake?.status === 'Closed') return false;
+  const deadlineDays = daysUntil(intake?.application_deadline);
+  if (deadlineDays !== null && deadlineDays < 0) return false;
+  return true;
+}
 
-  const sorted = [...programIntakes].sort((a, b) => {
-    const aIndex = INTAKE_PRIORITY.indexOf(a.split(' ')[0]);
-    const bIndex = INTAKE_PRIORITY.indexOf(b.split(' ')[0]);
-    return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+function sortIntakes(intakes = []) {
+  return [...intakes].sort((a, b) => {
+    if ((a.year || 0) !== (b.year || 0)) return (a.year || 0) - (b.year || 0);
+    const seasonDelta = INTAKE_PRIORITY.indexOf(a.name) - INTAKE_PRIORITY.indexOf(b.name);
+    if (seasonDelta !== 0) return seasonDelta;
+    return intakeStatusRank(a.status) - intakeStatusRank(b.status);
   });
+}
 
-  return { matched: false, nearest: sorted[0] || null, weight: 1, reason: sorted[0] ? `Nearest intake is ${sorted[0]}` : 'No intake data available' };
+function intakeMatchDetails(preferredIntakeName, preferredIntakeYear, program) {
+  const programIntakes = sortIntakes(parseProgramIntakes(program));
+  const availableIntakes = programIntakes.filter(isIntakeAvailable);
+  const candidateIntakes = availableIntakes.length ? availableIntakes : programIntakes;
+  const nearest = candidateIntakes[0] || null;
+
+  if (!preferredIntakeName) {
+    return {
+      matched: true,
+      nearest: nearest?.label || null,
+      selected: nearest,
+      weight: nearest ? 3 : 1,
+      reason: nearest ? 'Flexible intake preference' : 'No intake data available'
+    };
+  }
+
+  const exact = candidateIntakes.find((item) => item.name === preferredIntakeName && (preferredIntakeYear === null || item.year === preferredIntakeYear));
+  if (exact) {
+    return {
+      matched: true,
+      nearest: exact.label,
+      selected: exact,
+      weight: 5,
+      reason: exact.status === 'Upcoming' ? 'Preferred intake is upcoming' : 'Preferred intake available'
+    };
+  }
+
+  const sameSeason = candidateIntakes.find((item) => item.name === preferredIntakeName);
+  if (sameSeason) {
+    return {
+      matched: false,
+      nearest: sameSeason.label,
+      selected: sameSeason,
+      weight: 3,
+      reason: `Nearest intake is ${sameSeason.label}`
+    };
+  }
+
+  return {
+    matched: false,
+    nearest: nearest?.label || null,
+    selected: nearest,
+    weight: nearest ? 1 : 0,
+    reason: nearest ? `Nearest intake is ${nearest.label}` : 'No intake data available'
+  };
 }
 
 function subjectMatchDetails(preferredSubject, program) {
@@ -534,20 +689,36 @@ export function buildScholarshipMatches(profile, program, scholarships = []) {
     }));
 }
 
-export function buildDeadlineSnapshot(program = {}) {
-  const application_days_left = daysUntil(program.application_deadline);
+export function buildDeadlineSnapshot(program = {}, selectedIntake = null) {
+  const orderedIntakes = sortIntakes(parseProgramIntakes(program));
+  const fallbackIntake = orderedIntakes.find((item) => isIntakeAvailable(item)) || orderedIntakes[0] || null;
+  const activeIntake = selectedIntake || fallbackIntake;
+  const applicationDeadline = activeIntake?.application_deadline || program.application_deadline || null;
+  const startDate = activeIntake?.start_date || null;
+  const intakeStatus = activeIntake?.status || null;
+  const application_days_left = daysUntil(applicationDeadline);
+  const start_days_left = daysUntil(startDate);
   const scholarship_days_left = daysUntil(program.scholarship_deadline);
+  const intakeClosed = intakeStatus === 'Closed';
 
   return {
-    application_deadline: program.application_deadline || null,
+    intake_name: activeIntake?.name || null,
+    intake_year: activeIntake?.year || null,
+    intake_label: activeIntake?.label || null,
+    intake_status: intakeStatus,
+    start_date: startDate,
+    start_days_left,
+    application_deadline: applicationDeadline,
     scholarship_deadline: program.scholarship_deadline || null,
     application_days_left,
     scholarship_days_left,
     alerts: [
       application_days_left !== null && application_days_left <= 30 ? `Application deadline in ${application_days_left} days` : null,
+      start_days_left !== null && start_days_left <= 45 ? `Program starts in ${start_days_left} days` : null,
+      intakeClosed ? 'Selected intake is closed' : null,
       scholarship_days_left !== null && scholarship_days_left <= 21 ? `Scholarship deadline in ${scholarship_days_left} days` : null
     ].filter(Boolean),
-    expired: Boolean((application_days_left !== null && application_days_left < 0) || program.is_active === false)
+    expired: Boolean(intakeClosed || (application_days_left !== null && application_days_left < 0) || program.is_active === false)
   };
 }
 
@@ -655,7 +826,7 @@ export async function assignCounselor(supabase, { preferredCountry, preferredSub
 export function evaluateProgram(profileState, program, countryRules, scholarships = []) {
   const programCountry = program.universities?.country || program.country;
   const subject = subjectMatchDetails(profileState.preferred_subject, program);
-  const intake = intakeMatchDetails(profileState.intake, program);
+  const intake = intakeMatchDetails(profileState.preferred_intake_name, readNumber(profileState.preferred_intake_year), program);
   const gpa = gpaMatchDetails(profileState, program, countryRules);
   const english = englishMatchDetails(profileState, program, countryRules);
   const scholarshipMatches = buildScholarshipMatches(profileState, program, scholarships);
@@ -663,7 +834,7 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
   const country = countryPreferenceScore(profileState, programCountry);
   const gapYears = profileState.gap_years;
   const gapRisk = gapYears !== null && gapYears > countryRules.max_gap_years ? 'high' : gapYears !== null && gapYears > countryRules.gap_risk_threshold ? 'medium' : 'low';
-  const deadlineSnapshot = buildDeadlineSnapshot(program);
+  const deadlineSnapshot = buildDeadlineSnapshot(program, intake.selected);
   const visaRisk = computeVisaRisk(profileState, countryRules);
   const seatsTotal = readNumber(program.seats_total);
   const seatsFilled = readNumber(program.seats_filled) ?? 0;
@@ -697,6 +868,7 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
     subject_match: subject.tier,
     intake_match: intake.matched,
     nearest_intake: intake.nearest,
+    selected_intake: intake.selected,
     deadline_snapshot: deadlineSnapshot,
     financial_risk: budget.category === 'over' ? 'high' : budget.category === 'aid_needed' ? 'medium' : 'low',
     visa_risk_level: visaRisk.level,

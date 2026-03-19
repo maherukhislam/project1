@@ -162,10 +162,16 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Computer Science', 'Master', '2 years', 52000, 3.2, 6.5, 'Fall, Spring', true
+select id, 'Computer Science', 'Master', '2 years', 52000, 3.2, 6.5,
+  '[
+    {"name":"Fall","year":2026,"application_deadline":"2026-07-15T00:00:00Z","start_date":"2026-09-05T00:00:00Z","status":"Open"},
+    {"name":"Spring","year":2027,"application_deadline":"2026-11-15T00:00:00Z","start_date":"2027-01-10T00:00:00Z","status":"Upcoming"}
+  ]'::jsonb,
+  'Fall 2026, Spring 2027', true
 from public.universities where name = 'Harvard University';
 
 insert into public.programs (
@@ -176,10 +182,13 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Business Administration', 'Bachelor', '4 years', 48000, 3.0, 6.0, 'Fall', true
+select id, 'Business Administration', 'Bachelor', '4 years', 48000, 3.0, 6.0,
+  '[{"name":"Fall","year":2026,"application_deadline":"2026-06-30T00:00:00Z","start_date":"2026-09-20T00:00:00Z","status":"Open"}]'::jsonb,
+  'Fall 2026', true
 from public.universities where name = 'University of Oxford';
 
 insert into public.programs (
@@ -190,10 +199,16 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Data Science', 'Master', '1.5 years', 32000, 3.1, 6.5, 'Fall, Winter', true
+select id, 'Data Science', 'Master', '1.5 years', 32000, 3.1, 6.5,
+  '[
+    {"name":"Fall","year":2026,"application_deadline":"2026-08-01T00:00:00Z","start_date":"2026-09-15T00:00:00Z","status":"Open"},
+    {"name":"Winter","year":2027,"application_deadline":"2026-10-20T00:00:00Z","start_date":"2027-01-05T00:00:00Z","status":"Upcoming"}
+  ]'::jsonb,
+  'Fall 2026, Winter 2027', true
 from public.universities where name = 'University of Toronto';
 
 insert into public.programs (
@@ -204,10 +219,16 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Mechanical Engineering', 'Bachelor', '4 years', 36000, 3.0, 6.0, 'Spring, Fall', false
+select id, 'Mechanical Engineering', 'Bachelor', '4 years', 36000, 3.0, 6.0,
+  '[
+    {"name":"Spring","year":2027,"application_deadline":"2026-10-15T00:00:00Z","start_date":"2027-02-02T00:00:00Z","status":"Upcoming"},
+    {"name":"Fall","year":2026,"application_deadline":"2026-06-20T00:00:00Z","start_date":"2026-09-01T00:00:00Z","status":"Open"}
+  ]'::jsonb,
+  'Spring 2027, Fall 2026', false
 from public.universities where name = 'University of Melbourne';
 
 insert into public.programs (
@@ -218,10 +239,13 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Robotics and AI', 'Master', '2 years', 5000, 3.3, 6.5, 'Fall', true
+select id, 'Robotics and AI', 'Master', '2 years', 5000, 3.3, 6.5,
+  '[{"name":"Fall","year":2026,"application_deadline":"2026-05-30T00:00:00Z","start_date":"2026-10-01T00:00:00Z","status":"Open"}]'::jsonb,
+  'Fall 2026', true
 from public.universities where name = 'Technical University of Munich';
 
 insert into public.programs (
@@ -232,10 +256,16 @@ insert into public.programs (
   tuition_fee,
   min_gpa_required,
   min_english_score,
+  intakes,
   intake_periods,
   scholarship_available
 )
-select id, 'Civil Engineering', 'Master', '2 years', 17000, 3.0, 6.5, 'Fall, Spring', false
+select id, 'Civil Engineering', 'Master', '2 years', 17000, 3.0, 6.5,
+  '[
+    {"name":"Fall","year":2026,"application_deadline":"2026-07-20T00:00:00Z","start_date":"2026-09-10T00:00:00Z","status":"Open"},
+    {"name":"Spring","year":2027,"application_deadline":"2026-12-01T00:00:00Z","start_date":"2027-02-01T00:00:00Z","status":"Upcoming"}
+  ]'::jsonb,
+  'Fall 2026, Spring 2027', false
 from public.universities where name = 'Delft University of Technology';
 
 insert into public.scholarships (

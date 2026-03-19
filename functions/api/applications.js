@@ -25,6 +25,11 @@ function mergeProfiles(applications, profiles) {
   }));
 }
 
+function resolveSelectedIntake(program, intakeLabel) {
+  if (!Array.isArray(program?.intakes) || !program.intakes.length || !intakeLabel) return null;
+  return program.intakes.find((item) => `${item?.name || ''} ${item?.year || ''}`.trim() === String(intakeLabel).trim()) || null;
+}
+
 function buildStatusTimeline(application, userId) {
   let timeline = upsertTimelineEvent(application.timeline, {
     stage: 'created',
@@ -118,7 +123,7 @@ export async function onRequest(context) {
 
       const normalized = (data || []).map((application) => ({
         ...application,
-        deadline_snapshot: application.deadline_snapshot || buildDeadlineSnapshot(application.programs || {}),
+        deadline_snapshot: application.deadline_snapshot || buildDeadlineSnapshot(application.programs || {}, resolveSelectedIntake(application.programs, application.intake)),
         timeline: buildStatusTimeline(application, application.user_id)
       }));
 
@@ -204,7 +209,8 @@ export async function onRequest(context) {
       });
       const lead = computeLeadScore(profileState);
       const visaRisk = computeVisaRisk(profileState, countryRules);
-      const deadlineSnapshot = buildDeadlineSnapshot(program);
+      const selectedIntake = resolveSelectedIntake(program, intake) || programEvaluation.selected_intake || null;
+      const deadlineSnapshot = buildDeadlineSnapshot(program, selectedIntake);
       let timeline = upsertTimelineEvent([], {
         stage: 'created',
         label: 'Created',
@@ -318,7 +324,10 @@ export async function onRequest(context) {
       const { data: studentProfile } = await supabase.from('profiles').select('*').eq('user_id', currentApplication.user_id).maybeSingle();
       const profileState = computeProfileState(studentProfile || {});
       const visaRisk = computeVisaRisk(profileState, deriveCountryRules(currentApplication.programs?.universities?.country));
-      const deadlineSnapshot = buildDeadlineSnapshot(currentApplication.programs || {});
+      const deadlineSnapshot = buildDeadlineSnapshot(
+        currentApplication.programs || {},
+        resolveSelectedIntake(currentApplication.programs, currentApplication.intake)
+      );
       const { data: docs } = await supabase.from('documents').select('document_type, status').eq('user_id', currentApplication.user_id);
       const requiredDocuments = getDocumentRequirements({ ...profileState, preferred_country: currentApplication.programs?.universities?.country });
       const uploadedDocs = new Set((docs || []).filter((doc) => doc.status !== 'rejected').map((doc) => doc.document_type));

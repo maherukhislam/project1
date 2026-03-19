@@ -1,5 +1,20 @@
 import { getSupabase } from './_supabase.js';
 
+const hasActiveIntake = (program, now = Date.now()) => {
+  if (program.is_active === false) return false;
+
+  if (Array.isArray(program.intakes) && program.intakes.length) {
+    return program.intakes.some((intake) => {
+      if (intake?.status === 'Closed') return false;
+      if (!intake?.application_deadline) return true;
+      return new Date(intake.application_deadline).getTime() >= now;
+    });
+  }
+
+  if (!program.application_deadline) return true;
+  return new Date(program.application_deadline).getTime() >= now;
+};
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -34,11 +49,7 @@ export async function onRequest(context) {
       const now = Date.now();
       const filtered = includeExpired
         ? data || []
-        : (data || []).filter((program) => {
-            if (program.is_active === false) return false;
-            if (!program.application_deadline) return true;
-            return new Date(program.application_deadline).getTime() >= now;
-          });
+        : (data || []).filter((program) => hasActiveIntake(program, now));
       return new Response(JSON.stringify(filtered), { headers });
     }
 

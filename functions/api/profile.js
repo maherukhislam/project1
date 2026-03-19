@@ -9,6 +9,11 @@ const buildDefaultName = (user) => {
   return 'New User';
 };
 
+const buildPreferredIntakeLabel = (name, year) => {
+  if (!name) return null;
+  return year ? `${name} ${year}` : name;
+};
+
 const isRecursiveProfilesPolicyError = (error) =>
   Boolean(error?.message?.includes('infinite recursion detected in policy for relation "profiles"'));
 
@@ -133,9 +138,18 @@ export async function onRequest(context) {
 
     if (request.method === 'PUT') {
       const updates = await request.json();
+      const normalizedUpdates = { ...updates };
+
+      if ('preferred_intake_name' in normalizedUpdates || 'preferred_intake_year' in normalizedUpdates) {
+        normalizedUpdates.intake = buildPreferredIntakeLabel(
+          normalizedUpdates.preferred_intake_name,
+          normalizedUpdates.preferred_intake_year
+        );
+      }
+
       const mergedProfile = {
         ...(await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()).data,
-        ...updates,
+        ...normalizedUpdates,
         user_id: user.id,
         email: user.email,
         name: updates.name || buildDefaultName(user),
@@ -148,7 +162,7 @@ export async function onRequest(context) {
         email: user.email,
         name: mergedProfile.name,
         role: mergedProfile.role,
-        ...updates,
+        ...normalizedUpdates,
         profile_completion: isAdminRole ? 100 : computed.profile_completion,
         profile_status: isAdminRole ? 'complete' : computed.profile_status
       };

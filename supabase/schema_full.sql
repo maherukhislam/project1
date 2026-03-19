@@ -34,6 +34,8 @@ create table if not exists public.profiles (
   last_education_year integer,
   study_level text,
   preferred_subject text,
+  preferred_intake_name text,
+  preferred_intake_year integer,
   budget_min integer,
   budget_max integer,
   intake text,
@@ -103,6 +105,7 @@ create table if not exists public.programs (
   min_gpa_required numeric(3,2),
   min_english_score numeric(4,1),
   english_test_required boolean,
+  intakes jsonb not null default '[]'::jsonb,
   intake_periods text,
   scholarship_available boolean not null default false,
   application_deadline timestamptz,
@@ -198,6 +201,8 @@ alter table public.profiles
   add column if not exists academic_system text,
   add column if not exists medium_of_instruction text,
   add column if not exists last_education_year integer,
+  add column if not exists preferred_intake_name text,
+  add column if not exists preferred_intake_year integer,
   add column if not exists profile_status text not null default 'incomplete',
   add column if not exists lead_score integer not null default 0,
   add column if not exists lead_temperature text not null default 'Cold Lead',
@@ -232,6 +237,7 @@ alter table public.programs
   add column if not exists subject_area text,
   add column if not exists related_subjects jsonb default '[]'::jsonb,
   add column if not exists english_test_required boolean,
+  add column if not exists intakes jsonb not null default '[]'::jsonb,
   add column if not exists application_deadline timestamptz,
   add column if not exists scholarship_deadline timestamptz,
   add column if not exists seats_total integer,
@@ -274,6 +280,7 @@ create index if not exists idx_profiles_role on public.profiles(role);
 create index if not exists idx_profiles_email on public.profiles(lower(email));
 create index if not exists idx_profiles_phone on public.profiles(phone);
 create index if not exists idx_profiles_assigned_counselor on public.profiles(assigned_counselor_id);
+create index if not exists idx_profiles_preferred_intake_year on public.profiles(preferred_intake_year);
 create index if not exists idx_universities_country on public.universities(country);
 create index if not exists idx_programs_university_id on public.programs(university_id);
 create index if not exists idx_programs_degree_level on public.programs(degree_level);

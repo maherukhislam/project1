@@ -5,6 +5,12 @@ function percentage(numerator, denominator) {
   return Number(((numerator / denominator) * 100).toFixed(1));
 }
 
+function collectProgramIntakes(program = {}) {
+  if (Array.isArray(program.intakes) && program.intakes.length) return program.intakes;
+  if (!program.application_deadline) return [];
+  return [{ application_deadline: program.application_deadline, status: program.is_active === false ? 'Closed' : 'Open' }];
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -44,7 +50,7 @@ export async function onRequest(context) {
     const [students, universities, programs, scholarships, applications, counselors] = await Promise.all([
       supabase.from('profiles').select('id, preferred_country, lead_temperature, lead_score', { count: 'exact' }).eq('role', 'student'),
       supabase.from('universities').select('id', { count: 'exact' }),
-      supabase.from('programs').select('id, is_active, application_deadline'),
+      supabase.from('programs').select('id, is_active, application_deadline, intakes'),
       supabase.from('scholarships').select('id', { count: 'exact' }),
       supabase.from('applications').select('id, status, counselor_id, programs(universities(country, name))'),
       supabase.from('profiles').select('user_id, name').eq('role', 'counselor')
@@ -77,13 +83,17 @@ export async function onRequest(context) {
 
     const activePrograms = (programs.data || []).filter((program) => {
       if (program.is_active === false) return false;
-      if (!program.application_deadline) return true;
-      return new Date(program.application_deadline).getTime() >= Date.now();
+      const intakes = collectProgramIntakes(program);
+      if (!intakes.length) return true;
+      return intakes.some((intake) => intake?.status !== 'Closed' && (!intake?.application_deadline || new Date(intake.application_deadline).getTime() >= Date.now()));
     }).length;
     const expiringPrograms = (programs.data || []).filter((program) => {
-      if (!program.application_deadline) return false;
-      const diff = new Date(program.application_deadline).getTime() - Date.now();
-      return diff >= 0 && diff <= 14 * 24 * 60 * 60 * 1000;
+      const intakes = collectProgramIntakes(program);
+      return intakes.some((intake) => {
+        if (!intake?.application_deadline || intake?.status === 'Closed') return false;
+        const diff = new Date(intake.application_deadline).getTime() - Date.now();
+        return diff >= 0 && diff <= 14 * 24 * 60 * 60 * 1000;
+      });
     }).length;
 
     const hotLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Hot Lead').length;

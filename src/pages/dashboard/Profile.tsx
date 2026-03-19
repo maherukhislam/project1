@@ -27,9 +27,10 @@ const emptyForm = {
   last_education_year: '',
   study_level: '',
   preferred_subject: '',
+  preferred_intake_name: '',
+  preferred_intake_year: '',
   budget_min: '',
-  budget_max: '',
-  intake: ''
+  budget_max: ''
 };
 
 const Profile: React.FC = () => {
@@ -57,9 +58,10 @@ const Profile: React.FC = () => {
       last_education_year: profile.last_education_year?.toString() || '',
       study_level: profile.study_level || '',
       preferred_subject: profile.preferred_subject || '',
+      preferred_intake_name: profile.preferred_intake_name || '',
+      preferred_intake_year: profile.preferred_intake_year?.toString() || '',
       budget_min: profile.budget_min?.toString() || '',
-      budget_max: profile.budget_max?.toString() || '',
-      intake: profile.intake || ''
+      budget_max: profile.budget_max?.toString() || ''
     });
     setValidationErrors(profile.validation_errors || {});
   }, [profile]);
@@ -85,9 +87,12 @@ const Profile: React.FC = () => {
       ['gpa', 'gpa_scale', 'english_score'].forEach((field) => {
         updates[field] = formData[field as keyof typeof formData] ? parseFloat(formData[field as keyof typeof formData]) : null;
       });
-      ['budget_min', 'budget_max', 'last_education_year'].forEach((field) => {
+      ['budget_min', 'budget_max', 'last_education_year', 'preferred_intake_year'].forEach((field) => {
         updates[field] = formData[field as keyof typeof formData] ? parseInt(formData[field as keyof typeof formData], 10) : null;
       });
+      updates.intake = updates.preferred_intake_name && updates.preferred_intake_year
+        ? `${updates.preferred_intake_name} ${updates.preferred_intake_year}`
+        : null;
 
       const updated = await api.put('/api/profile', updates);
       setValidationErrors(updated.validation_errors || {});
@@ -287,14 +292,27 @@ const Profile: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Preferred Intake *</label>
-              <select value={formData.intake} onChange={(e) => setField('intake', e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none focus:border-sky-500">
+              <select value={formData.preferred_intake_name} onChange={(e) => setField('preferred_intake_name', e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none focus:border-sky-500">
                 <option value="">Select intake</option>
-                <option value="Spring 2026">Spring 2026</option>
-                <option value="Fall 2026">Fall 2026</option>
-                <option value="Spring 2027">Spring 2027</option>
-                <option value="Fall 2027">Fall 2027</option>
+                <option value="Spring">Spring</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Winter">Winter</option>
               </select>
-              {fieldHint('intake')}
+              {fieldHint('preferred_intake_name')}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Preferred Intake Year *</label>
+              <input
+                type="number"
+                min={new Date().getFullYear() - 1}
+                max={new Date().getFullYear() + 4}
+                value={formData.preferred_intake_year}
+                onChange={(e) => setField('preferred_intake_year', e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                placeholder={String(new Date().getFullYear())}
+              />
+              {fieldHint('preferred_intake_year')}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Budget Min (USD/year) *</label>
