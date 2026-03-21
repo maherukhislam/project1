@@ -20,4 +20,4 @@ STORAGE_BASE_URL = "https://files.example.com"
 # (add a new class + update getStorageService). No other files need to change.
 [[r2_buckets]]
 binding     = "STUDYGLOBAL_UPLOADS"
-bucket_name = "YOUR_BUCKET_NAME"
+bucket_name = "uploads"
