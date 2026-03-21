@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Award,
-  Bell,
   ChevronsRight,
   Compass,
   FileText,
@@ -18,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../../components/NotificationBell';
 
 // ── Nav definition ─────────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -280,9 +280,7 @@ const DashboardLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:text-slate-900">
-              <Bell className="h-4 w-4" />
-            </button>
+            <NotificationBell isDark={false} />
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 text-xs font-bold text-white shadow-sm">
               {profile?.name?.charAt(0)?.toUpperCase() || 'S'}
             </div>

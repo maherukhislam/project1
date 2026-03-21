@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Award,
   BarChart3,
-  Bell,
   BookOpen,
   ChevronsRight,
   ExternalLink,
@@ -21,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../../components/NotificationBell';
 
 // ── Nav definition ─────────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -289,10 +289,7 @@ const AdminLayout: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* Notification bell */}
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:text-slate-200">
-              <Bell className="h-4 w-4" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-400" />
-            </button>
+            <NotificationBell isDark={true} />
 
             {/* System status */}
             <div className="hidden items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/20 sm:flex">
