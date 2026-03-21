@@ -3,4 +3,15 @@ compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 
 [vars]
-# Environment variables are set in Cloudflare Pages dashboard
+# Set this to your R2 bucket's public URL in the Cloudflare Pages dashboard
+# e.g. https://pub-xxxxxxxxxxxx.r2.dev  or your custom domain
+R2_PUBLIC_BASE_URL = "https://pub-PLACEHOLDER.r2.dev"
+
+# ── R2 bucket binding ────────────────────────────────────────────────────────
+# Replace "YOUR_BUCKET_NAME" with your actual R2 bucket name.
+# In the Cloudflare Pages dashboard add the binding:
+#   Variable name : STUDYGLOBAL_UPLOADS
+#   R2 bucket     : <your bucket>
+[[r2_buckets]]
+binding    = "STUDYGLOBAL_UPLOADS"
+bucket_name = "YOUR_BUCKET_NAME"

@@ -12,6 +12,7 @@ import {
   Home,
   LogOut,
   Menu,
+  PenLine,
   Settings,
   ShieldPlus,
   Upload,
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { path: '/admin/scholarships', icon: Award,        label: 'Scholarships' },
   { path: '/admin/admins',       icon: ShieldPlus,   label: 'Admin & Roles' },
   { path: '/admin/blog',         icon: BarChart3,    label: 'Content / CMS' },
+  { path: '/admin/cms',          icon: PenLine,      label: 'Page Editor' },
 ];
 
 const ACCOUNT_ITEMS = [

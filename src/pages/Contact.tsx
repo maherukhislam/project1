@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Clock, MessageSquare } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
+import { useCms } from '../contexts/CmsContext';
 
 const Contact: React.FC = () => {
+  const { content: { contact: cms } } = useCms();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,15 +18,14 @@ const Contact: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, this would send to an API
     setSubmitted(true);
   };
 
   const contactInfo = [
-    { icon: Mail, label: 'Email', value: 'info@studyglobal.com', href: 'mailto:info@studyglobal.com' },
-    { icon: Phone, label: 'Phone', value: '+1 (555) 123-4567', href: 'tel:+15551234567' },
-    { icon: MapPin, label: 'Address', value: '123 Education Street, New York, NY 10001', href: '#' },
-    { icon: Clock, label: 'Hours', value: 'Mon - Fri: 9:00 AM - 6:00 PM', href: '#' }
+    { icon: Mail, label: 'Email', value: cms.email, href: `mailto:${cms.email}` },
+    { icon: Phone, label: 'Phone', value: cms.phone, href: `tel:${cms.phone.replace(/\D/g, '')}` },
+    { icon: MapPin, label: 'Address', value: cms.address, href: '#' },
+    { icon: Clock, label: 'Hours', value: cms.hours, href: '#' }
   ];
 
   return (
@@ -43,12 +45,10 @@ const Contact: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-              Get in
-              <span className="bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent"> Touch</span>
+              {cms.heroTitle1}
+              <span className="bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent"> {cms.heroTitle2}</span>
             </h1>
-            <p className="text-xl text-slate-600 leading-relaxed">
-              Have questions about studying abroad? Our team is here to help you every step of the way.
-            </p>
+            <p className="text-xl text-slate-600 leading-relaxed">{cms.heroDesc}</p>
           </motion.div>
         </div>
       </section>
@@ -93,9 +93,7 @@ const Contact: React.FC = () => {
                     <MessageSquare className="w-6 h-6 text-sky-500" />
                     <h3 className="font-semibold text-slate-900">Live Chat</h3>
                   </div>
-                  <p className="text-slate-600 text-sm mb-4">
-                    Chat with our advisors in real-time for instant support.
-                  </p>
+                  <p className="text-slate-600 text-sm mb-4">{cms.liveChatDesc}</p>
                   <button className="w-full py-2 rounded-xl bg-sky-50 text-sky-600 hover:bg-sky-100 transition-colors font-medium text-sm">
                     Start Chat
                   </button>

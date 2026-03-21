@@ -3,58 +3,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GraduationCap, Globe2, Award, FileText, Users, Plane, Building, BookOpen, ArrowRight, CheckCircle } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
+import { useCms } from '../contexts/CmsContext';
+
+const SERVICE_ICONS = [GraduationCap, Globe2, Award, FileText, Users, Plane, Building, BookOpen];
 
 const Services: React.FC = () => {
-  const services = [
-    {
-      icon: GraduationCap,
-      title: 'University Matching',
-      desc: 'Our AI-powered system analyzes your profile to recommend universities that best match your academic background, preferences, and career goals.',
-      features: ['Profile-based recommendations', 'Program compatibility analysis', 'Admission probability assessment', 'Deadline tracking']
-    },
-    {
-      icon: Globe2,
-      title: 'Visa Assistance',
-      desc: 'Navigate the complex visa application process with confidence. Our experts guide you through documentation, interviews, and compliance requirements.',
-      features: ['Document preparation', 'Interview coaching', 'Application review', 'Status tracking']
-    },
-    {
-      icon: Award,
-      title: 'Scholarship Guidance',
-      desc: 'Discover scholarships you qualify for and get expert help with applications. We help you maximize your chances of securing financial aid.',
-      features: ['Scholarship matching', 'Application assistance', 'Essay review', 'Interview preparation']
-    },
-    {
-      icon: FileText,
-      title: 'Application Support',
-      desc: 'From personal statements to recommendation letters, we help you craft compelling applications that stand out to admissions committees.',
-      features: ['SOP writing assistance', 'Document review', 'Application strategy', 'Timeline management']
-    },
-    {
-      icon: Users,
-      title: 'Personal Counseling',
-      desc: 'Get one-on-one guidance from experienced counselors who understand your unique situation and can provide tailored advice.',
-      features: ['Career counseling', 'Course selection', 'University shortlisting', 'Decision support']
-    },
-    {
-      icon: Plane,
-      title: 'Pre-departure Support',
-      desc: 'Prepare for your journey with comprehensive pre-departure orientation covering accommodation, travel, and cultural adaptation.',
-      features: ['Accommodation guidance', 'Travel planning', 'Cultural orientation', 'Student community access']
-    },
-    {
-      icon: Building,
-      title: 'Accommodation Assistance',
-      desc: 'Find safe, comfortable, and affordable housing near your university with our accommodation support services.',
-      features: ['Housing options', 'Roommate matching', 'Lease review', 'Area guidance']
-    },
-    {
-      icon: BookOpen,
-      title: 'Test Preparation',
-      desc: 'Access resources and guidance for standardized tests like IELTS, TOEFL, GRE, and GMAT to achieve your target scores.',
-      features: ['Study materials', 'Practice tests', 'Score improvement tips', 'Test booking assistance']
-    }
-  ];
+  const { content: { services: cms } } = useCms();
 
   return (
     <div className="min-h-screen">
@@ -73,14 +27,12 @@ const Services: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-              Comprehensive
+              {cms.heroTitle1}
               <span className="block bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
-                Study Abroad Services
+                {cms.heroTitle2}
               </span>
             </h1>
-            <p className="text-xl text-slate-600 leading-relaxed">
-              From university selection to visa approval, we provide end-to-end support for your international education journey.
-            </p>
+            <p className="text-xl text-slate-600 leading-relaxed">{cms.heroDesc}</p>
           </motion.div>
         </div>
       </section>
@@ -89,35 +41,38 @@ const Services: React.FC = () => {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-8">
-            {services.map((service, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <GlassCard className="p-8 h-full">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shrink-0">
-                      <service.icon className="w-7 h-7 text-white" />
+            {cms.services.map((service, i) => {
+              const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <GlassCard className="p-8 h-full">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shrink-0">
+                        <Icon className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-slate-900 mb-2">{service.title}</h3>
+                        <p className="text-slate-600 mb-4">{service.desc}</p>
+                        <ul className="space-y-2">
+                          {service.features.map((feature, j) => (
+                            <li key={j} className="flex items-center gap-2 text-sm text-slate-600">
+                              <CheckCircle className="w-4 h-4 text-sky-500 shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-slate-900 mb-2">{service.title}</h3>
-                      <p className="text-slate-600 mb-4">{service.desc}</p>
-                      <ul className="space-y-2">
-                        {service.features.map((feature, j) => (
-                          <li key={j} className="flex items-center gap-2 text-sm text-slate-600">
-                            <CheckCircle className="w-4 h-4 text-sky-500" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </GlassCard>
-              </motion.div>
-            ))}
+                  </GlassCard>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -131,10 +86,8 @@ const Services: React.FC = () => {
             viewport={{ once: true }}
           >
             <GlassCard className="p-12 text-center" hover={false}>
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">Ready to Get Started?</h2>
-              <p className="text-xl text-slate-600 mb-8">
-                Create your free account and start exploring your options today.
-              </p>
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">{cms.ctaTitle}</h2>
+              <p className="text-xl text-slate-600 mb-8">{cms.ctaDesc}</p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link
                   to="/signup"

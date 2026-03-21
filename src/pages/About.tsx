@@ -2,21 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Eye, Heart, Users, Award, Globe2, CheckCircle } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
+import { useCms } from '../contexts/CmsContext';
+
+const VALUE_ICONS = [Heart, Award, Users, Globe2];
 
 const About: React.FC = () => {
-  const values = [
-    { icon: Heart, title: 'Student-First Approach', desc: 'Your success is our priority. We tailor our services to meet your unique needs and aspirations.' },
-    { icon: Award, title: 'Excellence', desc: 'We partner with top-ranked universities and maintain the highest standards in our services.' },
-    { icon: Users, title: 'Community', desc: 'Join a global network of students and alumni who support each other throughout their journey.' },
-    { icon: Globe2, title: 'Global Perspective', desc: 'We embrace diversity and help students thrive in multicultural environments.' },
-  ];
-
-  const team = [
-    { name: 'Dr. Sarah Chen', role: 'Founder & CEO', image: null },
-    { name: 'Michael Roberts', role: 'Head of Admissions', image: null },
-    { name: 'Priya Sharma', role: 'Scholarship Director', image: null },
-    { name: 'James Wilson', role: 'Visa Specialist', image: null },
-  ];
+  const { content: { about } } = useCms();
 
   return (
     <div className="min-h-screen">
@@ -35,14 +26,12 @@ const About: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6">
-              Empowering Dreams,
+              {about.heroTitle1}
               <span className="block bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
-                Building Futures
+                {about.heroTitle2}
               </span>
             </h1>
-            <p className="text-xl text-slate-600 leading-relaxed">
-              Since 2010, StudyGlobal has been helping students achieve their dreams of studying at world-class universities. We believe that education has the power to transform lives and create a better world.
-            </p>
+            <p className="text-xl text-slate-600 leading-relaxed">{about.heroDesc}</p>
           </motion.div>
         </div>
       </section>
@@ -60,10 +49,8 @@ const About: React.FC = () => {
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center mb-6">
                   <Target className="w-7 h-7 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Our Mission</h2>
-                <p className="text-slate-600 leading-relaxed">
-                  To democratize access to quality international education by providing personalized guidance, comprehensive support, and innovative solutions that help students from all backgrounds achieve their academic goals.
-                </p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">{about.missionTitle}</h2>
+                <p className="text-slate-600 leading-relaxed">{about.missionText}</p>
               </GlassCard>
             </motion.div>
 
@@ -76,10 +63,8 @@ const About: React.FC = () => {
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6">
                   <Eye className="w-7 h-7 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">Our Vision</h2>
-                <p className="text-slate-600 leading-relaxed">
-                  To be the world's most trusted education consultancy, known for our integrity, expertise, and commitment to student success. We envision a world where every talented student can access the education they deserve.
-                </p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">{about.visionTitle}</h2>
+                <p className="text-slate-600 leading-relaxed">{about.visionText}</p>
               </GlassCard>
             </motion.div>
           </div>
@@ -95,28 +80,31 @@ const About: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Our Values</h2>
-            <p className="text-xl text-slate-600">The principles that guide everything we do</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">{about.valuesTitle}</h2>
+            <p className="text-xl text-slate-600">{about.valuesSubtitle}</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((value, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <GlassCard className="p-6 h-full text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
-                    <value.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-2">{value.title}</h3>
-                  <p className="text-slate-600 text-sm">{value.desc}</p>
-                </GlassCard>
-              </motion.div>
-            ))}
+            {about.values.map((value, i) => {
+              const Icon = VALUE_ICONS[i % VALUE_ICONS.length];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <GlassCard className="p-6 h-full text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
+                      <Icon className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-900 mb-2">{value.title}</h3>
+                    <p className="text-slate-600 text-sm">{value.desc}</p>
+                  </GlassCard>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -130,19 +118,10 @@ const About: React.FC = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-4xl font-bold text-slate-900 mb-6">Why Choose StudyGlobal?</h2>
-              <p className="text-xl text-slate-600 mb-8">
-                With over a decade of experience, we've helped thousands of students achieve their dreams.
-              </p>
+              <h2 className="text-4xl font-bold text-slate-900 mb-6">{about.whyTitle}</h2>
+              <p className="text-xl text-slate-600 mb-8">{about.whySubtitle}</p>
               <ul className="space-y-4">
-                {[
-                  '500+ Partner Universities Worldwide',
-                  'Personalized University Matching',
-                  'Scholarship Guidance & Support',
-                  'Visa Application Assistance',
-                  'Pre-departure Orientation',
-                  '24/7 Student Support'
-                ].map((item, i) => (
+                {about.whyFeatures.map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <CheckCircle className="w-6 h-6 text-sky-500 shrink-0" />
                     <span className="text-slate-700">{item}</span>
@@ -157,12 +136,7 @@ const About: React.FC = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              {[
-                { value: '10K+', label: 'Students Placed' },
-                { value: '50+', label: 'Countries' },
-                { value: '95%', label: 'Success Rate' },
-                { value: '14+', label: 'Years Experience' }
-              ].map((stat, i) => (
+              {about.stats.map((stat, i) => (
                 <GlassCard key={i} className="p-6 text-center">
                   <div className="text-4xl font-bold bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent mb-2">
                     {stat.value}
@@ -184,12 +158,12 @@ const About: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Meet Our Team</h2>
-            <p className="text-xl text-slate-600">Experienced professionals dedicated to your success</p>
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">{about.teamTitle}</h2>
+            <p className="text-xl text-slate-600">{about.teamSubtitle}</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((member, i) => (
+            {about.team.map((member, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -198,8 +172,18 @@ const About: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <GlassCard className="p-6 text-center">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 mx-auto mb-4 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">{member.name.charAt(0)}</span>
+                  <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden">
+                    {member.image ? (
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-white">{member.name.charAt(0)}</span>
+                      </div>
+                    )}
                   </div>
                   <h3 className="text-lg font-semibold text-slate-900">{member.name}</h3>
                   <p className="text-slate-500 text-sm">{member.role}</p>

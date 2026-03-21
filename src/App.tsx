@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CmsProvider } from './contexts/CmsContext';
 import { handleGoogleRedirect } from './lib/googleAuth';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -44,6 +45,7 @@ import AdminPrograms from './pages/admin/AdminPrograms';
 import AdminScholarships from './pages/admin/AdminScholarships';
 import AdminDocuments from './pages/admin/AdminDocuments';
 import AdminBlog from './pages/admin/AdminBlog';
+import AdminCMS from './pages/admin/AdminCMS';
 
 // Handle Google redirect on app load
 handleGoogleRedirect();
@@ -80,6 +82,7 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 function App() {
   return (
+    <CmsProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -136,6 +139,7 @@ function App() {
             <Route path="scholarships" element={<AdminScholarships />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="blog" element={<AdminBlog />} />
+            <Route path="cms" element={<AdminCMS />} />
             <Route path="change-password" element={<ChangePassword />} />
           </Route>
 
@@ -144,6 +148,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </CmsProvider>
   );
 }
 
