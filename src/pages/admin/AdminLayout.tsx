@@ -196,13 +196,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
 
 // ── Layout ─────────────────────────────────────────────────────────────────
 const AdminLayout: React.FC = () => {
-  const { profile, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { profile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed]   = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-
-  const handleSignOut = async () => { await signOut(); navigate('/'); };
 
   if (profile && profile.role !== 'admin') {
     return (
