@@ -1,65 +1,209 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, GraduationCap, BookOpen, Award, FileText, Upload, LogOut, Menu, X, Globe, BarChart3, ShieldPlus, ArrowUpRight } from 'lucide-react';
+import {
+  Award,
+  BarChart3,
+  Bell,
+  BookOpen,
+  ChevronsRight,
+  ExternalLink,
+  FileText,
+  GraduationCap,
+  HelpCircle,
+  Home,
+  LogOut,
+  Menu,
+  Settings,
+  ShieldPlus,
+  Upload,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const AdminLayout: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+// ── Nav definition ─────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { path: '/admin',              icon: Home,         label: 'Dashboard',      exact: true },
+  { path: '/admin/students',     icon: Users,        label: 'Students',       notifs: 4 },
+  { path: '/admin/applications', icon: FileText,     label: 'Applications',   notifs: 7 },
+  { path: '/admin/documents',    icon: Upload,       label: 'Documents' },
+  { path: '/admin/universities', icon: GraduationCap,label: 'Universities' },
+  { path: '/admin/programs',     icon: BookOpen,     label: 'Programs' },
+  { path: '/admin/scholarships', icon: Award,        label: 'Scholarships' },
+  { path: '/admin/admins',       icon: ShieldPlus,   label: 'Admin & Roles' },
+  { path: '/admin/blog',         icon: BarChart3,    label: 'Content / CMS' },
+];
+
+const ACCOUNT_ITEMS = [
+  { icon: Settings,  label: 'Settings' },
+  { icon: HelpCircle,label: 'Help & Support' },
+];
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpen }) => {
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const { profile, signOut } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-
-  const navGroups: Array<{
-    title: string;
-    items: Array<{
-      path: string;
-      icon: React.ComponentType<{ className?: string }>;
-      label: string;
-      exact?: boolean;
-    }>;
-  }> = [
-    {
-      title: 'Overview',
-      items: [
-        { path: '/admin', icon: Home, label: 'Dashboard', exact: true }
-      ]
-    },
-    {
-      title: 'Admissions',
-      items: [
-        { path: '/admin/students', icon: Users, label: 'Leads / Students' },
-        { path: '/admin/applications', icon: FileText, label: 'Applications' },
-        { path: '/admin/documents', icon: Upload, label: 'Documents' }
-      ]
-    },
-    {
-      title: 'Academics',
-      items: [
-        { path: '/admin/universities', icon: GraduationCap, label: 'Universities' },
-        { path: '/admin/programs', icon: BookOpen, label: 'Programs' },
-        { path: '/admin/scholarships', icon: Award, label: 'Scholarships' }
-      ]
-    },
-    {
-      title: 'System',
-      items: [
-        { path: '/admin/admins', icon: ShieldPlus, label: 'Admin & Roles' },
-        { path: '/admin/blog', icon: BarChart3, label: 'Content / CMS' }
-      ]
-    }
-  ];
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) return location.pathname === path;
     return location.pathname.startsWith(path) && (path !== '/admin' || location.pathname === '/admin');
   };
 
-  // Check if user is admin
+  const handleSignOut = async () => { await signOut(); navigate('/'); };
+
+  return (
+    <nav
+      className={`relative flex h-full shrink-0 flex-col border-r border-white/8 bg-slate-900 transition-all duration-300 ease-in-out ${
+        collapsed ? 'w-16' : 'w-64'
+      }`}
+    >
+      {/* Subtle teal glow */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(20,184,166,0.07),transparent_55%)]" />
+
+      {/* ── Brand ─────────────────────────────────────────── */}
+      <div className={`border-b border-white/8 ${collapsed ? 'p-3' : 'p-4'}`}>
+        <Link
+          to="/"
+          className={`flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5 ${collapsed ? 'justify-center' : ''}`}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 shadow-md shadow-teal-900/40">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-none text-white">StudyGlobal</p>
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-teal-400">
+                Ops Dashboard
+              </p>
+            </div>
+          )}
+        </Link>
+      </div>
+
+      {/* ── User ──────────────────────────────────────────── */}
+      <div className={`border-b border-white/8 ${collapsed ? 'p-3' : 'p-4'}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 text-xs font-bold text-white shadow-sm">
+            {profile?.name?.charAt(0)?.toUpperCase() || 'A'}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{profile?.name || 'Admin'}</p>
+              <p className="truncate text-xs text-slate-400">{profile?.email}</p>
+            </div>
+          )}
+          {!collapsed && (
+            <span className="shrink-0 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">
+              Live
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main nav ──────────────────────────────────────── */}
+      <div className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(item.path, item.exact);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setMobileOpen(false)}
+              title={collapsed ? item.label : undefined}
+              className={`relative flex h-10 w-full items-center rounded-md transition-all duration-150 ${
+                active
+                  ? 'border-l-2 border-teal-500 bg-teal-500/10 text-teal-300'
+                  : 'border-l-2 border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              }`}
+            >
+              <div className={`grid h-full shrink-0 place-content-center ${collapsed ? 'w-full' : 'w-12'}`}>
+                <item.icon className="h-4 w-4" />
+              </div>
+              {!collapsed && (
+                <span className="flex-1 text-sm font-medium">{item.label}</span>
+              )}
+              {!collapsed && item.notifs && (
+                <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-[10px] font-bold text-teal-300 ring-1 ring-teal-500/30">
+                  {item.notifs}
+                </span>
+              )}
+              {collapsed && item.notifs && (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-400" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* ── Account section ───────────────────────────────── */}
+      {!collapsed && (
+        <div className="border-t border-white/8 p-2">
+          <p className="mb-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Account
+          </p>
+          {ACCOUNT_ITEMS.map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-400 transition-all hover:bg-white/5 hover:text-slate-200"
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+          <Link
+            to="/"
+            className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-400 transition-all hover:bg-white/5 hover:text-slate-200"
+          >
+            <ExternalLink className="h-4 w-4" />
+            View Website
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </div>
+      )}
+
+      {/* ── Collapse toggle ────────────────────────────────── */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center border-t border-white/8 p-3 transition-colors hover:bg-white/5"
+      >
+        <div className="grid h-10 w-10 shrink-0 place-content-center">
+          <ChevronsRight
+            className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${collapsed ? '' : 'rotate-180'}`}
+          />
+        </div>
+        {!collapsed && (
+          <span className="text-sm font-medium text-slate-400">Collapse</span>
+        )}
+      </button>
+    </nav>
+  );
+};
+
+// ── Layout ─────────────────────────────────────────────────────────────────
+const AdminLayout: React.FC = () => {
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [collapsed, setCollapsed]   = React.useState(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const handleSignOut = async () => { await signOut(); navigate('/'); };
+
   if (profile && profile.role !== 'admin') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -74,151 +218,91 @@ const AdminLayout: React.FC = () => {
     );
   }
 
-  // Note: The undefined NAV_ITEMS logic was removed here since pageLabel was unused
+  // Page label from current path
+  const currentNav = NAV_ITEMS.find(n =>
+    n.exact ? location.pathname === n.path : location.pathname.startsWith(n.path)
+  );
+  const pageLabel = currentNav?.label ?? 'Admin';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-800/90 backdrop-blur-xl border-b border-slate-700">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <Globe className="w-8 h-8 text-sky-400" />
-            <div>
-              <span className="block text-xl font-bold text-white">StudyGlobal</span>
-              <span className="block text-xs text-slate-400">Operations Hub</span>
-            </div>
-          </Link>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-xl text-slate-400 hover:bg-slate-700"
-          >
-            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
+    <div className="flex min-h-screen w-full bg-slate-950 text-slate-100">
+
+      {/* ── Desktop sidebar ────────────────────────────────── */}
+      <div className="sticky top-0 hidden h-screen lg:flex">
+        <Sidebar
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+        />
       </div>
 
-      {/* Sidebar */}
-      <aside className={`
-        fixed top-0 left-0 z-40 h-full w-72
-        bg-slate-800/90 backdrop-blur-xl border-r border-slate-700
-        transform transition-transform duration-300
-        lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="p-6 border-b border-slate-700 hidden lg:block">
-            <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-indigo-500/10 p-4">
-              <Link to="/" className="flex items-center gap-2 mb-3">
-                <Globe className="w-8 h-8 text-sky-400" />
-                <div>
-                  <span className="text-xl font-bold text-white">StudyGlobal</span>
-                  <span className="text-xs text-sky-200/70 block">Operations Hub</span>
-                </div>
-              </Link>
-              <p className="text-sm text-slate-300 leading-6">
-                Manage student intake, application workflow, content, and platform settings from one place.
-              </p>
-            </div>
-          </div>
+      {/* ── Mobile sidebar ─────────────────────────────────── */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 lg:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <Sidebar
+          collapsed={false}
+          setCollapsed={() => {}}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+        />
+      </div>
 
-          {/* User Info */}
-          <div className="p-6 border-b border-slate-700 mt-14 lg:mt-0">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-semibold text-lg">
-                {profile?.name?.charAt(0) || 'A'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white truncate">{profile?.name || 'Admin'}</p>
-                <p className="text-sm text-slate-400 truncate">{profile?.email}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="min-h-0 flex-1 space-y-7 overflow-y-auto px-4 py-5 lg:space-y-6 lg:px-5">
-            {navGroups.map((group) => (
-              <div
-                key={group.title}
-                className="rounded-[1.5rem] border border-slate-700/80 bg-[linear-gradient(180deg,rgba(30,41,59,0.72),rgba(15,23,42,0.68))] p-3 shadow-[0_14px_28px_rgba(2,6,23,0.22)] lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
-              >
-                <div className="mb-3 flex items-center justify-between px-3 lg:mb-2 lg:px-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    {group.title}
-                  </p>
-                  <span className="rounded-full border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:bg-slate-900">
-                    {group.items.length}
-                  </span>
-                </div>
-                <ul className="space-y-2 lg:space-y-2.5 lg:border-l lg:border-slate-700 lg:pl-4">
-                  {group.items.map((item) => (
-                    <li key={item.path}>
-                      <Link
-                        to={item.path}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`group flex min-h-14 items-center gap-3 rounded-[1.15rem] border px-4 py-3.5 transition-all lg:min-h-0 lg:rounded-[1rem] lg:px-3.5 lg:py-3 ${
-                          isActive(item.path, item.exact)
-                            ? 'border-sky-500/20 bg-sky-500/15 text-sky-300 shadow-[0_14px_28px_rgba(14,165,233,0.12)] lg:border-slate-700 lg:bg-slate-800/95 lg:text-white lg:shadow-[0_12px_24px_rgba(2,6,23,0.2)]'
-                            : 'border-transparent bg-slate-800/45 text-slate-400 hover:border-slate-700 hover:bg-slate-700/50 hover:text-white lg:bg-transparent lg:hover:border-slate-700 lg:hover:bg-slate-800/75'
-                        }`}
-                      >
-                        <span
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] transition-all ${
-                            isActive(item.path, item.exact)
-                              ? 'bg-sky-400/10 text-sky-300 lg:bg-sky-500/15 lg:text-sky-300'
-                              : 'bg-slate-900/70 text-slate-300 group-hover:bg-slate-900'
-                          }`}
-                        >
-                          <item.icon className="h-5 w-5" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{item.label}</span>
-                          <span className={`block text-xs ${isActive(item.path, item.exact) ? 'text-sky-100/60 lg:text-slate-400' : 'text-slate-500'}`}>
-                            {group.title === 'Overview' ? 'High-level performance view' : group.title === 'Admissions' ? 'Daily intake and processing' : group.title === 'Academics' ? 'Catalog and offering management' : 'Permissions and publishing'}
-                          </span>
-                        </div>
-                        <ArrowUpRight className={`h-4 w-4 shrink-0 transition-all ${isActive(item.path, item.exact) ? 'text-sky-200/70 lg:text-slate-500' : 'text-slate-600 group-hover:text-slate-300'}`} />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-
-          {/* Footer */}
-          <div className="shrink-0 space-y-2 border-t border-slate-700 p-4">
-            <Link
-              to="/"
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-700/50 hover:text-white transition-all"
-            >
-              <Globe className="w-5 h-5" />
-              View Website
-            </Link>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Overlay */}
-      {sidebarOpen && (
+      {/* Mobile overlay */}
+      {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen pt-16 lg:pt-0">
-        <div className="p-6 lg:p-8">
+      {/* ── Content area ───────────────────────────────────── */}
+      <div className="flex min-w-0 flex-1 flex-col">
+
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/8 bg-slate-900/80 px-5 py-3 backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-400 lg:hidden"
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-teal-500">Operations Hub</p>
+              <h1 className="text-base font-semibold leading-tight text-white">{pageLabel}</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Notification bell */}
+            <button className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-400 transition-colors hover:text-slate-200">
+              <Bell className="h-4 w-4" />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-400" />
+            </button>
+
+            {/* System status */}
+            <div className="hidden items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/20 sm:flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              System Online
+            </div>
+
+            {/* Avatar */}
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 text-xs font-bold text-white shadow-sm">
+              {profile?.name?.charAt(0)?.toUpperCase() || 'A'}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-5 lg:p-7">
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
