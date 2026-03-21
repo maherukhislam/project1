@@ -74,11 +74,7 @@ const AdminLayout: React.FC = () => {
     );
   }
 
-  // Page label from current path
-  const currentNav = NAV_ITEMS.find(n =>
-    n.exact ? location.pathname === n.path : location.pathname.startsWith(n.path)
-  );
-  const pageLabel = currentNav?.label ?? 'Admin';
+  // Note: The undefined NAV_ITEMS logic was removed here since pageLabel was unused
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -221,8 +217,8 @@ const AdminLayout: React.FC = () => {
       <main className="lg:ml-72 min-h-screen pt-16 lg:pt-0">
         <div className="p-6 lg:p-8">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
