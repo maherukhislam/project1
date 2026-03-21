@@ -31,8 +31,8 @@ const NAV_ITEMS = [
 ];
 
 const ACCOUNT_ITEMS = [
-  { icon: Settings,   label: 'Settings' },
-  { icon: HelpCircle, label: 'Help & Support' },
+  { icon: Settings,   label: 'Change Password', path: '/dashboard/change-password' },
+  { icon: HelpCircle, label: 'Help & Support',  path: null },
 ];
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
@@ -159,15 +159,27 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
           <p className="mb-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
             Account
           </p>
-          {ACCOUNT_ITEMS.map(({ icon: Icon, label }) => (
-            <button
-              key={label}
-              className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900"
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
+          {ACCOUNT_ITEMS.map(({ icon: Icon, label, path }) =>
+            path ? (
+              <Link
+                key={label}
+                to={path}
+                onClick={() => setMobileOpen(false)}
+                className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900"
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            ) : (
+              <button
+                key={label}
+                className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900"
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            )
+          )}
           <button
             onClick={handleSignOut}
             className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-slate-500 transition-all hover:bg-red-50 hover:text-red-600"

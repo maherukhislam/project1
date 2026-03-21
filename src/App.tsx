@@ -18,8 +18,12 @@ import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+
+// Shared
+import ChangePassword from './pages/Shared/ChangePassword';
 
 // Dashboard Pages
 import DashboardLayout from './pages/dashboard/DashboardLayout';
@@ -91,6 +95,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
           <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
 
@@ -110,6 +115,7 @@ function App() {
             <Route path="documents" element={<Documents />} />
             <Route path="scholarships" element={<Scholarships />} />
             <Route path="universities" element={<Universities />} />
+            <Route path="change-password" element={<ChangePassword />} />
           </Route>
 
           {/* Admin Routes */}
@@ -130,6 +136,7 @@ function App() {
             <Route path="scholarships" element={<AdminScholarships />} />
             <Route path="documents" element={<AdminDocuments />} />
             <Route path="blog" element={<AdminBlog />} />
+            <Route path="change-password" element={<ChangePassword />} />
           </Route>
 
           {/* Catch all */}
