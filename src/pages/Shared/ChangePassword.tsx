@@ -68,9 +68,6 @@ const ChangePassword: React.FC = () => {
   };
 
   // Theme tokens
-  const accent     = isAdmin ? 'teal' : 'teal';
-  const focusBorder  = `focus:border-${accent}-500`;
-  const focusRing    = `focus:ring-${accent}-500/20`;
   const btnClass   = isAdmin
     ? 'bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 shadow-teal-900/30'
     : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-teal-500/20';
