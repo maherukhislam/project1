@@ -3,15 +3,21 @@ compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 
 [vars]
-# Set this to your R2 bucket's public URL in the Cloudflare Pages dashboard
-# e.g. https://pub-xxxxxxxxxxxx.r2.dev  or your custom domain
-R2_PUBLIC_BASE_URL = "https://pub-PLACEHOLDER.r2.dev"
+# ── Storage (provider-agnostic) ───────────────────────────────────────────────
+# This is the ONLY value to change when switching CDN / storage provider.
+# Set your actual public URL in the Cloudflare Pages dashboard:
+#   e.g.  https://pub-xxxxxxxxxxxx.r2.dev
+#         https://files.yourdomain.com
+#         https://your-bucket.s3.amazonaws.com
+STORAGE_BASE_URL = "https://files.example.com"
 
-# ── R2 bucket binding ────────────────────────────────────────────────────────
-# Replace "YOUR_BUCKET_NAME" with your actual R2 bucket name.
-# In the Cloudflare Pages dashboard add the binding:
+# ── R2 bucket binding ─────────────────────────────────────────────────────────
+# In Cloudflare Pages dashboard → Settings → Functions → R2 Bucket Bindings:
 #   Variable name : STUDYGLOBAL_UPLOADS
-#   R2 bucket     : <your bucket>
+#   R2 bucket     : <your bucket name>
+#
+# To swap to a different storage provider later, update functions/lib/storage.js
+# (add a new class + update getStorageService). No other files need to change.
 [[r2_buckets]]
-binding    = "STUDYGLOBAL_UPLOADS"
+binding     = "STUDYGLOBAL_UPLOADS"
 bucket_name = "YOUR_BUCKET_NAME"

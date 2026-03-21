@@ -1,29 +1,18 @@
 /**
  * POST /api/team-photo
- * Uploads a team member profile photo to Cloudflare R2.
  *
- * Multipart form fields:
- *   file   – the image file (JPEG / PNG / WebP)
+ * Uploads a team member profile photo.
+ * Storage logic lives in functions/lib/storage.js — zero changes here when
+ * switching from R2 to S3, Supabase Storage, or any other provider.
  *
- * R2 binding:  STUDYGLOBAL_UPLOADS  (set in Cloudflare Pages dashboard)
- * Env var:     R2_PUBLIC_BASE_URL   (e.g. https://pub-xxx.r2.dev)
+ * Request:  multipart/form-data   { file: <image> }
+ * Response: { file_path, url }
+ *
+ * Callers must store file_path (not url).
+ * Use VITE_STORAGE_BASE_URL + buildFileUrl() on the frontend to render images.
  */
 
-function getUploadsBucket(env) {
-  const candidates = [
-    env.STUDYGLOBAL_UPLOADS,
-    env.UPLOADS_BUCKET,
-    env.R2_BUCKET,
-    env.BUCKET,
-  ];
-  return candidates.find(b => b && typeof b.put === 'function') || null;
-}
-
-function buildPublicUrl(env, key) {
-  const base = env.R2_PUBLIC_BASE_URL || env.UPLOADS_PUBLIC_BASE_URL || env.PUBLIC_UPLOAD_BASE_URL;
-  if (!base) return null;
-  return `${String(base).replace(/\/+$/, '')}/${key}`;
-}
+import { getStorageService, buildFileUrl } from '../lib/storage.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -32,22 +21,24 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']);
+
+function err(msg, status = 400) {
+  return new Response(JSON.stringify({ error: msg }), { status, headers: CORS });
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
-  }
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  if (request.method !== 'POST') return err('Method not allowed', 405);
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: CORS });
-  }
-
-  const bucket = getUploadsBucket(env);
-  if (!bucket) {
-    return new Response(
-      JSON.stringify({ error: 'R2 bucket binding not configured. Add STUDYGLOBAL_UPLOADS binding in Cloudflare Pages.' }),
-      { status: 500, headers: CORS }
+  // ── Storage service ────────────────────────────────────────────────────────
+  const storage = getStorageService(env);
+  if (!storage) {
+    return err(
+      'Storage not configured. Add STUDYGLOBAL_UPLOADS binding and STORAGE_BASE_URL in Cloudflare Pages.',
+      500
     );
   }
 
@@ -55,35 +46,32 @@ export async function onRequest(context) {
     const formData = await request.formData();
     const file = formData.get('file');
 
-    if (!(file instanceof File)) {
-      return new Response(JSON.stringify({ error: 'Missing file field' }), { status: 400, headers: CORS });
-    }
+    if (!(file instanceof File)) return err('Missing file field');
+    if (!ALLOWED_TYPES.has(file.type)) return err('Only JPEG, PNG, WebP, or GIF images are allowed');
+    if (file.size > 5 * 1024 * 1024) return err('Image must be under 5 MB');
 
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowed.includes(file.type)) {
-      return new Response(JSON.stringify({ error: 'Only JPEG, PNG, WebP, or GIF images are allowed' }), { status: 400, headers: CORS });
-    }
-
-    const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.jpg';
-    const key = `team/${Date.now()}${ext}`;
+    // Generic path — no r2 / cloudflare / provider prefix
+    const ext      = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.jpg';
+    const filePath = `team/${Date.now()}${ext}`;
 
     const buffer = await file.arrayBuffer();
-    await bucket.put(key, buffer, {
-      httpMetadata: { contentType: file.type },
+    await storage.upload(filePath, buffer, {
+      contentType:    file.type,
       customMetadata: { kind: 'team_photo' },
     });
 
-    const publicUrl = buildPublicUrl(env, key);
-    if (!publicUrl) {
-      return new Response(
-        JSON.stringify({ error: 'Upload succeeded but R2_PUBLIC_BASE_URL is not set.' }),
-        { status: 500, headers: CORS }
-      );
+    const url = buildFileUrl(filePath, env);
+    if (!url) {
+      return err('Upload succeeded but STORAGE_BASE_URL is not set in environment variables.', 500);
     }
 
-    return new Response(JSON.stringify({ url: publicUrl, key }), { status: 201, headers: CORS });
-  } catch (err) {
-    console.error('Team photo upload error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Upload failed' }), { status: 500, headers: CORS });
+    // Always return file_path (store this) + url (for immediate display)
+    return new Response(
+      JSON.stringify({ file_path: filePath, url }),
+      { status: 201, headers: CORS }
+    );
+  } catch (e) {
+    console.error('[team-photo] error:', e);
+    return err(e.message || 'Upload failed', 500);
   }
 }

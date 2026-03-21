@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Target, Eye, Heart, Users, Award, Globe2, CheckCircle } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import { useCms } from '../contexts/CmsContext';
+import { buildFileUrl } from '../lib/storage';
 
 const VALUE_ICONS = [Heart, Award, Users, Globe2];
 
@@ -175,7 +176,7 @@ const About: React.FC = () => {
                   <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden">
                     {member.image ? (
                       <img
-                        src={member.image}
+                        src={buildFileUrl(member.image)}
                         alt={member.name}
                         className="w-full h-full object-cover"
                       />

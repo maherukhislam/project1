@@ -3,7 +3,7 @@ import { Camera, ChevronDown, ChevronUp, Eye, Loader2, Plus, RotateCcw, Save, Tr
 import { Link } from 'react-router-dom';
 import { useCms } from '../../contexts/CmsContext';
 import type { CmsAbout, CmsContact, CmsService, CmsServices } from '../../contexts/CmsContext';
-import { uploadTeamPhoto } from '../../lib/uploadTeamPhoto';
+import { uploadTeamPhoto, buildFileUrl } from '../../lib/storage';
 
 type TabKey = 'about' | 'services' | 'contact';
 
@@ -100,7 +100,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ name, image, onImageChang
         title="Click or drag to upload photo"
       >
         {image ? (
-          <img src={image} alt={name} className="w-full h-full object-cover" />
+          <img src={buildFileUrl(image)} alt={name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
             <span className="text-2xl font-bold text-slate-300">{name?.charAt(0) || '?'}</span>
@@ -354,12 +354,11 @@ const AboutTab: React.FC<{ onSaved: () => void }> = ({ onSaved }) => {
           <Plus className="w-4 h-4" /> Add Team Member
         </button>
 
-        {/* R2 setup hint */}
+          {/* Storage setup hint */}
         <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300 leading-relaxed">
-          <strong>R2 Storage setup:</strong> To persist photos across devices and deployments, configure your
-          Cloudflare R2 bucket. Set <code className="bg-black/30 px-1 rounded">STUDYGLOBAL_UPLOADS</code> binding
-          and <code className="bg-black/30 px-1 rounded">R2_PUBLIC_BASE_URL</code> in your Cloudflare Pages
-          dashboard. Until then, photos are stored as local previews.
+           <strong>Storage setup:</strong> To persist photos across devices and deployments, configure your
+          storage provider. Set <code className="bg-black/30 px-1 rounded">STUDYGLOBAL_UPLOADS</code> binding
+          and <code className="bg-black/30 px-1 rounded">STORAGE_BASE_URL</code> in your Cloudflare Pagesdashboard. Until then, photos are stored as local previews.
         </div>
       </SectionCard>
 
