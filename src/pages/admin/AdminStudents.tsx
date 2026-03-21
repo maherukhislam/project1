@@ -19,6 +19,7 @@ import {
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 import supabase from '../../lib/supabase';
+import { generateStudentPdf } from '../../lib/generateStudentPdf.js';
 
 const stageOrder = ['new_lead', 'profile_ready', 'applied', 'review', 'visa'] as const;
 
@@ -149,27 +150,26 @@ const AdminStudents: React.FC = () => {
     setDownloadingReport(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error('Unauthorized');
+      const token = session?.access_token ?? '';
 
-      const response = await fetch(`/api/admin/students-report?user_id=${encodeURIComponent(selectedStudent.user_id)}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || 'Failed to generate report');
-      }
+      const pdfBytes = await generateStudentPdf(
+        selectedStudent,
+        selectedDocs,
+        selectedApps,
+        token,
+      );
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+      const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${(selectedStudent.name || 'student').replace(/[^\w.-]/g, '_')}-profile-report.pdf`;
+      link.href     = url;
+      link.download = `${(selectedStudent.name || 'student').replace(/[^\w.-]/g, '_')}-studyglobal-report.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Failed to download report:', err);
+      console.error('Failed to generate PDF:', err);
     } finally {
       setDownloadingReport(false);
     }
