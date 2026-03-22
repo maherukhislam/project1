@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Filter, Award, Calendar, DollarSign, GraduationCap, X,
+  Search, Filter, Award, DollarSign, GraduationCap, X,
   ExternalLink, CheckCircle, AlertCircle, XCircle, Zap, Star,
   Clock, Layers, TrendingUp, BookOpen, ChevronDown, ChevronUp
 } from 'lucide-react';
@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { api } from '../lib/api';
 import {
   rankScholarships, checkEligibility, calculateFinalTuition,
-  getDaysRemaining, getDeadlineLabel, getDeadlineUrgency,
+  getDeadlineLabel, getDeadlineUrgency,
   getBudgetFit, isExpired, intakeMatches,
   type StudentProfile, type Scholarship, type EligibilityResult
 } from '../lib/scholarshipUtils';
