@@ -180,6 +180,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
     } catch {
+      return defaultContent;
     }
     return defaultContent;
   });

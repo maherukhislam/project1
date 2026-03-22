@@ -397,7 +397,6 @@ export async function generateStudentPdf(
     drawText(page1, 'No documents uploaded.', MARGIN, curY, italicFont, 9, SLATE_LT);
     curY -= 18;
   } else {
-    let docPageRef = 2; // page 2 onward will be documents
     for (let i = 0; i < documents.length; i++) {
       const doc = documents[i];
       const type   = val(doc.document_type, 'Document').replace(/_/g, ' ');
@@ -407,8 +406,6 @@ export async function generateStudentPdf(
 
       drawText(page1, line, MARGIN + 8, curY, regularFont, 8.5, SLATE);
       curY -= 15;
-      docPageRef++;
-
       if (curY < MARGIN + 30) {
         drawText(page1, `… and ${documents.length - i - 1} more (see following pages)`, MARGIN + 8, curY, italicFont, 8, SLATE_LT);
         break;

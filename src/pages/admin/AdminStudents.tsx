@@ -107,17 +107,26 @@ const AdminStudents: React.FC = () => {
     }, {}),
   [documents]);
 
-  const getStage = (student: any) => {
-    const studentApps = applicationsByUser[student.user_id] || [];
-    const completion = student.profile_completion || 0;
+  const studentStages = useMemo(() =>
+    students.reduce((acc: Record<string, (typeof stageOrder)[number]>, student: any) => {
+      const studentApps = applicationsByUser[student.user_id] || [];
+      const completion = student.profile_completion || 0;
 
-    if (studentApps.some((app) => app.status === 'visa_processing')) return 'visa';
-    if (studentApps.some((app) => app.status === 'accepted')) return 'visa';
-    if (studentApps.some((app) => ['submitted', 'under_review'].includes(app.status))) return 'review';
-    if (studentApps.length > 0) return 'applied';
-    if (completion >= 80) return 'profile_ready';
-    return 'new_lead';
-  };
+      if (studentApps.some((app) => app.status === 'visa_processing' || app.status === 'accepted')) {
+        acc[student.user_id] = 'visa';
+      } else if (studentApps.some((app) => ['submitted', 'under_review'].includes(app.status))) {
+        acc[student.user_id] = 'review';
+      } else if (studentApps.length > 0) {
+        acc[student.user_id] = 'applied';
+      } else if (completion >= 80) {
+        acc[student.user_id] = 'profile_ready';
+      } else {
+        acc[student.user_id] = 'new_lead';
+      }
+
+      return acc;
+    }, {}),
+  [students, applicationsByUser]);
 
   const filteredStudents = useMemo(() =>
     students
@@ -126,16 +135,16 @@ const AdminStudents: React.FC = () => {
           !search ||
           student.name?.toLowerCase().includes(search.toLowerCase()) ||
           student.email?.toLowerCase().includes(search.toLowerCase());
-        const stage = getStage(student);
+        const stage = studentStages[student.user_id] || 'new_lead';
         const matchesStage = stageFilter === 'all' || stage === stageFilter;
         return matchesSearch && matchesStage;
       })
       .sort((a, b) => (b.profile_completion || 0) - (a.profile_completion || 0)),
-  [students, search, stageFilter, applicationsByUser]);
+  [students, search, stageFilter, studentStages]);
 
   const selectedApps = selectedStudent ? (applicationsByUser[selectedStudent.user_id] || []) : [];
   const selectedDocs = selectedStudent ? (documentsByUser[selectedStudent.user_id] || []) : [];
-  const selectedStage = selectedStudent ? getStage(selectedStudent) : 'new_lead';
+  const selectedStage = selectedStudent ? (studentStages[selectedStudent.user_id] || 'new_lead') : 'new_lead';
 
   const { totalStudents, readyStudents, activeApplicants, needsAttention } = useMemo(() => ({
     totalStudents:    students.length,
@@ -169,7 +178,7 @@ const AdminStudents: React.FC = () => {
         token,
       );
 
-      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes.slice()], { type: 'application/pdf' });
       const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href     = url;
@@ -285,7 +294,7 @@ const AdminStudents: React.FC = () => {
 
           <div className="space-y-3">
             {filteredStudents.length > 0 ? filteredStudents.map((student, index) => {
-              const stage = getStage(student);
+              const stage = studentStages[student.user_id] || 'new_lead';
               const stageInfoItem = stageMeta[stage];
               const studentApps = applicationsByUser[student.user_id] || [];
               const studentDocs = documentsByUser[student.user_id] || [];
