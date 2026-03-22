@@ -98,6 +98,31 @@ const COUNTRY_VISA_PROFILES = {
   }
 };
 
+const REMATCH_TRIGGER_FIELDS = new Set([
+  'preferred_country',
+  'preferred_subject',
+  'study_level',
+  'education_level',
+  'gpa',
+  'gpa_scale',
+  'english_score',
+  'english_test_type',
+  'budget_min',
+  'budget_max',
+  'preferred_intake_name',
+  'preferred_intake_year',
+  'intake',
+  'medium_of_instruction',
+  'last_education_year'
+]);
+
+const BACKUP_COUNTRY_FALLBACKS = {
+  'United Kingdom': ['Malaysia', 'Hungary', 'China'],
+  Canada: ['Malaysia', 'Germany', 'Hungary'],
+  'United States': ['Malaysia', 'Hungary', 'Australia'],
+  Australia: ['Malaysia', 'Germany', 'China']
+};
+
 const DOCUMENT_BASE = ['passport', 'academic_certificate', 'transcript', 'cv'];
 const DOCUMENT_BY_LEVEL = { Bachelor: ['sop'], Master: ['sop', 'recommendation'], PhD: ['sop', 'recommendation', 'research_proposal'] };
 const DOCUMENT_BY_COUNTRY = { Canada: ['financial_statement'], Australia: ['financial_statement'], Germany: ['aps_certificate'], 'United States': ['financial_statement'], 'United Kingdom': ['financial_statement'] };
@@ -164,6 +189,38 @@ export function normalizeScalarList(value) {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function sameScalarValue(left, right) {
+  if (left === right) return true;
+  if ((left === null || left === undefined || left === '') && (right === null || right === undefined || right === '')) return true;
+  return String(left) === String(right);
+}
+
+export function shouldTriggerRematch(existingProfile = {}, updates = {}) {
+  return Object.entries(updates).some(([key, value]) => REMATCH_TRIGGER_FIELDS.has(key) && !sameScalarValue(existingProfile?.[key], value));
+}
+
+export function getRematchState(profile = {}) {
+  if (profile.role === 'admin') {
+    return {
+      needs_rematch: false,
+      last_matched_at: profile.last_matched_at || null,
+      reason: null
+    };
+  }
+
+  const needsRematch = Boolean(profile.needs_rematch || !profile.last_matched_at);
+
+  return {
+    needs_rematch: needsRematch,
+    last_matched_at: profile.last_matched_at || null,
+    reason: needsRematch
+      ? profile.needs_rematch
+        ? 'Matching inputs changed after the last recommendation run.'
+        : 'Profile was updated after the last recommendation run.'
+      : null
+  };
 }
 
 export function deriveCountryRules(countryName, countryRecord = null) {
@@ -1104,6 +1161,47 @@ function computeAcceptanceProbability({
   };
 }
 
+function getUniversityPerformance(program = {}) {
+  const acceptanceRate =
+    readNumber(program.offer_success_rate) ??
+    readNumber(program.acceptance_rate) ??
+    readNumber(program.universities?.acceptance_rate);
+  const visaSuccessRate =
+    readNumber(program.visa_success_rate) ??
+    readNumber(program.universities?.visa_success_rate);
+
+  let score = 0;
+  let reason = 'No historical performance data available';
+
+  if (acceptanceRate !== null) {
+    if (acceptanceRate >= 65) {
+      score += 8;
+      reason = 'University has strong offer conversion history';
+    } else if (acceptanceRate >= 45) {
+      score += 5;
+      reason = 'University has balanced offer conversion history';
+    } else if (acceptanceRate >= 25) {
+      score += 2;
+      reason = 'University is relatively selective';
+    } else {
+      score -= 2;
+      reason = 'University is highly selective based on past offer rates';
+    }
+  }
+
+  if (visaSuccessRate !== null) {
+    if (visaSuccessRate >= 75) score += 3;
+    else if (visaSuccessRate < 50) score -= 2;
+  }
+
+  return {
+    score,
+    acceptance_rate: acceptanceRate,
+    visa_success_rate: visaSuccessRate,
+    reason
+  };
+}
+
 function buildApplicationStrategy(matches = []) {
   const safePool = matches.filter((item) => item.match_score >= 75);
   const moderatePool = matches.filter((item) => item.match_score >= 60 && item.match_score < 75);
@@ -1128,6 +1226,48 @@ function buildApplicationStrategy(matches = []) {
   };
 }
 
+function suggestBackupCountries(profileState, countries = [], evaluatedPrograms = []) {
+  if (!profileState.preferred_country) return [];
+
+  const highMatchesInPreferredCountry = evaluatedPrograms.filter(
+    (program) =>
+      (program.universities?.country || program.country) === profileState.preferred_country &&
+      program.match_score >= 75
+  );
+  if (highMatchesInPreferredCountry.length >= 2) return [];
+
+  const grouped = new Map();
+  evaluatedPrograms
+    .filter((program) => (program.universities?.country || program.country) && (program.universities?.country || program.country) !== profileState.preferred_country)
+    .filter((program) => program.subject_match !== 'none')
+    .filter((program) => ['affordable', 'stretch', 'aid_needed', 'unknown'].includes(program.budget_category))
+    .filter((program) => program.match_score >= 55)
+    .forEach((program) => {
+      const country = program.universities?.country || program.country;
+      const current = grouped.get(country) || { score: 0, count: 0, examples: [] };
+      current.score += program.match_score + (program.visa_risk_level === 'Low risk' ? 6 : program.visa_risk_level === 'Medium risk' ? 2 : -2);
+      current.count += 1;
+      if (current.examples.length < 2) current.examples.push(program.name);
+      grouped.set(country, current);
+    });
+
+  const ranked = [...grouped.entries()]
+    .map(([country, value]) => ({
+      country,
+      avg_score: Number((value.score / value.count).toFixed(1)),
+      examples: value.examples
+    }))
+    .sort((a, b) => b.avg_score - a.avg_score)
+    .slice(0, 3);
+
+  if (ranked.length) return ranked;
+
+  return (BACKUP_COUNTRY_FALLBACKS[profileState.preferred_country] || [])
+    .filter((country) => (countries || []).some((item) => item.name === country) || !countries.length)
+    .slice(0, 3)
+    .map((country) => ({ country, avg_score: null, examples: [] }));
+}
+
 export function evaluateProgram(profileState, program, countryRules, scholarships = [], options = {}) {
   const programCountry = program.universities?.country || program.country;
   const subject = subjectMatchDetails(profileState.preferred_subject, program);
@@ -1137,6 +1277,7 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
   const scholarshipMatches = buildScholarshipMatches(profileState, program, scholarships);
   const budget = budgetMatchDetails(profileState, program, countryRules, scholarshipMatches.length > 0 || program.scholarship_available);
   const country = countryPreferenceScore(profileState, programCountry);
+  const universityPerformance = getUniversityPerformance(program);
   const gapYears = profileState.gap_years;
   const gapRisk = gapYears !== null && gapYears > countryRules.max_gap_years ? 'high' : gapYears !== null && gapYears > countryRules.gap_risk_threshold ? 'medium' : 'low';
   const deadlineSnapshot = buildDeadlineSnapshot(program, intake.selected);
@@ -1168,6 +1309,7 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
         budget.score +
         subject.score +
         country.score +
+        universityPerformance.score +
         intake.weight +
         (scholarshipMatches.length ? Math.min(5 + scholarshipMatches.length * 2, 10) : 0) -
         (nearlyFull ? 8 : 0) -
@@ -1226,12 +1368,14 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
     acceptance_probability: acceptanceProbability,
     document_readiness: documentReadiness,
     profile_strength_score: profileStrengthScore,
+    university_performance: universityPerformance,
     match_reasons: [
       gpa.reason,
       english.reason,
       budget.reason,
       subject.reason,
       country.reason,
+      universityPerformance.reason,
       intake.reason,
       scholarshipMatches.length ? 'Scholarship available' : null,
       nearlyFull ? 'Intake nearly full' : null,
@@ -1297,6 +1441,7 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
   }
 
   finalMatches = finalMatches.sort((a, b) => b.match_score - a.match_score);
+  const backupCountries = suggestBackupCountries(profileState, countries, evaluated);
 
   return {
     profile: {
@@ -1315,6 +1460,7 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
       relaxed_stage,
       alternatives_returned: finalMatches.length > 0,
       suggestions: profileState.improvement_flags,
+      backup_countries: backupCountries,
       application_strategy: buildApplicationStrategy(finalMatches)
     }
   };

@@ -28,6 +28,15 @@ function err(msg, status = 400) {
   return new Response(JSON.stringify({ error: msg }), { status, headers: HEADERS });
 }
 
+async function flagProfileForRematch(supabase, userId) {
+  if (!userId) return;
+  await supabase
+    .from('profiles')
+    .update({ needs_rematch: true })
+    .eq('user_id', userId)
+    .eq('role', 'student');
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -115,6 +124,8 @@ export async function onRequest(context) {
 
       if (error) throw error;
 
+      await flagProfileForRematch(supabase, user.id);
+
       await logAuditEvent(supabase, {
         user_id: user.id,
         actor_user_id: user.id,
@@ -145,6 +156,8 @@ export async function onRequest(context) {
 
       if (error) throw error;
 
+      await flagProfileForRematch(supabase, data.user_id);
+
       await logAuditEvent(supabase, {
         user_id: data.user_id,
         actor_user_id: user.id,
@@ -163,13 +176,15 @@ export async function onRequest(context) {
       if (!id) return err('id is required');
 
       // .eq('user_id', user.id) prevents students from deleting others' documents
-      const { error } = await supabase
+      const { data: deletedRows, error } = await supabase
         .from('documents')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('user_id');
 
       if (error) throw error;
+      await flagProfileForRematch(supabase, deletedRows?.[0]?.user_id || user.id);
       return new Response(JSON.stringify({ ok: true }), { headers: HEADERS });
     }
 

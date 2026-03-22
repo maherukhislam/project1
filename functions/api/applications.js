@@ -65,6 +65,15 @@ function buildStatusTimeline(application, userId) {
   return timeline;
 }
 
+async function flagProfileForRematch(supabase, userId) {
+  if (!userId) return;
+  await supabase
+    .from('profiles')
+    .update({ needs_rematch: true })
+    .eq('user_id', userId)
+    .eq('role', 'student');
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -111,9 +120,9 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ count: count || 0 }), { headers });
       }
 
-      const selectFields = minimal
-        ? 'id, user_id, counselor_id, status, created_at, intake, notes, program_id, offer_type, offer_received_at, next_steps, deadline_snapshot, timeline, programs(id, name, degree_level, universities(id, name, country, logo_url))'
-        : '*, programs(*, universities(id, name, country, logo_url))';
+        const selectFields = minimal
+        ? 'id, user_id, counselor_id, status, created_at, intake, notes, program_id, offer_type, offer_received_at, next_steps, deadline_snapshot, timeline, programs(id, name, degree_level, universities(id, name, country, logo_url, acceptance_rate))'
+        : '*, programs(*, universities(id, name, country, logo_url, acceptance_rate))';
 
       let query = supabase.from('applications').select(selectFields);
       if (!isAdmin) query = query.eq('user_id', user.id);
@@ -166,7 +175,7 @@ export async function onRequest(context) {
 
       const { data: program, error: programError } = await supabase
         .from('programs')
-        .select('*, universities(id, name, country, logo_url)')
+        .select('*, universities(id, name, country, logo_url, acceptance_rate)')
         .eq('id', program_id)
         .single();
       if (programError) throw programError;
@@ -342,7 +351,7 @@ export async function onRequest(context) {
 
       let existingQuery = supabase
         .from('applications')
-        .select('*, programs(*, universities(id, name, country, logo_url))')
+        .select('*, programs(*, universities(id, name, country, logo_url, acceptance_rate))')
         .eq('id', id);
       if (!isAdmin) existingQuery = existingQuery.eq('user_id', user.id);
 
@@ -437,6 +446,10 @@ export async function onRequest(context) {
 
       const { data, error } = await updateQuery.select().single();
       if (error) throw error;
+
+      if (nextStatus === 'rejected') {
+        await flagProfileForRematch(supabase, data.user_id);
+      }
 
       await logAuditEvent(supabase, {
         user_id: data.user_id,

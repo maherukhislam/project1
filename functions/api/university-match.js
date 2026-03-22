@@ -25,6 +25,7 @@ export async function onRequest(context) {
     const token = authHeader?.replace('Bearer ', '');
     const body = await request.json();
     let profile = body;
+    let authenticatedUser = null;
 
     if (token) {
       const {
@@ -37,6 +38,7 @@ export async function onRequest(context) {
       }
 
       if (user) {
+        authenticatedUser = user;
         const { data: savedProfile } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
         profile = { ...(savedProfile || {}), ...body };
       }
@@ -48,7 +50,7 @@ export async function onRequest(context) {
 
     let programsQuery = supabase
       .from('programs')
-      .select('*, universities(id, name, country, logo_url)')
+      .select('*, universities(id, name, country, logo_url, acceptance_rate)')
       .eq('degree_level', degreeLevel)
       .neq('is_active', false);
 
@@ -67,22 +69,26 @@ export async function onRequest(context) {
     if (countriesError) throw countriesError;
     if (scholarshipsError) throw scholarshipsError;
 
-    const filteredPrograms = preferredCountry
-      ? (programs || []).filter((program) => program.universities?.country === preferredCountry || !program.universities?.country)
-      : (programs || []);
-
     const result = computeMatchResults({
       profile,
-      programs: filteredPrograms.length ? filteredPrograms : programs || [],
+      programs: programs || [],
       countries: countries || [],
       scholarships: scholarships || []
     });
 
     const limit = Number(body.limit) > 0 ? Number(body.limit) : 20;
 
+    const matchedAt = new Date().toISOString();
+    if (authenticatedUser) {
+        await supabase
+          .from('profiles')
+          .update({ needs_rematch: false, last_matched_at: matchedAt })
+          .eq('user_id', authenticatedUser.id);
+    }
+
     return new Response(
       JSON.stringify({
-        profile: result.profile,
+        profile: authenticatedUser ? { ...result.profile, needs_rematch: false, last_matched_at: matchedAt } : result.profile,
         meta: result.meta,
         matches: result.matches.slice(0, limit)
       }),

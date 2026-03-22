@@ -1,5 +1,5 @@
 import { getSupabase, hasSupabaseServiceRoleKey } from './_supabase.js';
-import { computeProfileState, logAuditEvent } from './_matching.js';
+import { computeProfileState, getRematchState, logAuditEvent, shouldTriggerRematch } from './_matching.js';
 
 // ── Bootstrap admin ───────────────────────────────────────────────────────────
 // Only configured via the FIRST_ADMIN_EMAIL environment variable — no hardcoded
@@ -13,6 +13,7 @@ const USER_BLOCKED_FIELDS = new Set([
   'profile_completion', 'profile_status',
   'lead_score', 'lead_temperature',
   'visa_risk_score', 'visa_risk_level',
+  'needs_rematch', 'last_matched_at',
   'assigned_counselor_id', 'counselor_id',
   'duplicate_flags', 'fraud_flags',
   'document_requirements',
@@ -53,6 +54,8 @@ const buildFallbackProfile = (user, isBootstrapCandidate) => {
     validation_errors: computed.validation_errors,
     blocking_reasons: computed.blocking_reasons,
     document_requirements: computed.document_requirements,
+    needs_rematch: true,
+    last_matched_at: null,
     created_at: new Date().toISOString(),
     fallback: true
   };
@@ -113,9 +116,9 @@ export async function onRequest(context) {
             .select('*')
             .single();
           if (promoteError) throw promoteError;
-          return new Response(JSON.stringify({ ...updated, ...computeProfileState(updated) }), { headers });
+          return new Response(JSON.stringify({ ...updated, ...computeProfileState(updated), ...getRematchState(updated) }), { headers });
         }
-        return new Response(JSON.stringify({ ...data, ...computed }), { headers });
+        return new Response(JSON.stringify({ ...data, ...computed, ...getRematchState(data) }), { headers });
       }
 
       if (isRecursiveProfilesPolicyError(error)) {
@@ -139,14 +142,16 @@ export async function onRequest(context) {
       const isBootstrapNew = bootstrapAdminEmail && user.email?.toLowerCase() === bootstrapAdminEmail;
       const role = isBootstrapNew ? 'admin' : 'student';
 
-      const payload = {
-        user_id: user.id,
-        email: user.email,
-        name: buildDefaultName(user),
-        role,
-        profile_completion: role === 'admin' ? 100 : 10,
-        profile_status: role === 'admin' ? 'complete' : 'incomplete'
-      };
+        const payload = {
+          user_id: user.id,
+          email: user.email,
+          name: buildDefaultName(user),
+          role,
+          needs_rematch: role !== 'admin',
+          last_matched_at: null,
+          profile_completion: role === 'admin' ? 100 : 10,
+          profile_status: role === 'admin' ? 'complete' : 'incomplete'
+        };
 
       const { data: created, error: createError } = await supabase
         .from('profiles')
@@ -209,6 +214,7 @@ export async function onRequest(context) {
 
       const computed = computeProfileState(mergedProfile);
       const isAdminRole = existingRole === 'admin';
+      const rematchTriggered = existingRole !== 'admin' && shouldTriggerRematch(existingProfile || {}, safeUpdates);
 
       const payload = {
         ...safeUpdates,
@@ -218,6 +224,7 @@ export async function onRequest(context) {
         role: existingRole,                                                     // always from DB
         profile_completion: isAdminRole ? 100 : computed.profile_completion,   // always server-computed
         profile_status:     isAdminRole ? 'complete' : computed.profile_status, // always server-computed
+        needs_rematch: isAdminRole ? false : rematchTriggered || existingProfile?.needs_rematch || false,
       };
 
       const { data, error } = await supabase
@@ -250,7 +257,7 @@ export async function onRequest(context) {
           profile_status: computed.profile_status
         }
       });
-      return new Response(JSON.stringify({ ...data, ...computed }), { headers });
+      return new Response(JSON.stringify({ ...data, ...computed, ...getRematchState(data) }), { headers });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });

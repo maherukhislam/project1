@@ -94,7 +94,9 @@ export async function onRequest(context) {
       duplicate_flags: duplicateSignals.duplicate_flags,
       fraud_flags: duplicateSignals.fraud_flags,
       visa_risk_score: visaRisk.score,
-      visa_risk_level: visaRisk.level
+      visa_risk_level: visaRisk.level,
+      needs_rematch: true,
+      last_matched_at: null
     });
 
     if (profileError) throw profileError;
