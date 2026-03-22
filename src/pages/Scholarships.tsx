@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,7 +13,7 @@ import {
   rankScholarships, checkEligibility, calculateFinalTuition,
   getDeadlineLabel, getDeadlineUrgency,
   getBudgetFit, isExpired, intakeMatches,
-  type StudentProfile, type Scholarship, type EligibilityResult
+  type StudentProfile, type Scholarship, type EligibilityResult, type EligibilityStatus
 } from '../lib/scholarshipUtils';
 
 const STUDY_LEVELS = ['Any', 'Bachelor', 'Master', 'PhD', 'Diploma'];
@@ -354,7 +354,6 @@ const ScholarshipCard: React.FC<{
 
 const Scholarships: React.FC = () => {
   const [allScholarships, setAllScholarships] = useState<Scholarship[]>([]);
-  const [ranked, setRanked] = useState<Array<Scholarship & { _eligibility: EligibilityResult; _score: number }>>([]);
   const [countries, setCountries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -401,21 +400,18 @@ const Scholarships: React.FC = () => {
   }, [filters.country, filters.fundingType, filters.studyLevel, filters.appType,
       filters.meritBased, filters.needBased]);
 
-  useEffect(() => {
+  const ranked = useMemo(() => {
     const profileActive = Object.values(profile).some(v => v != null && v !== '');
     let list = allScholarships.filter(s =>
       !filters.search ||
       s.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
       s.universities?.name?.toLowerCase().includes(filters.search.toLowerCase())
     );
-
     list = list.filter(s => intakeMatches(s, filters.intake || null));
-
     if (profileActive) {
-      setRanked(rankScholarships(list, profile) as any);
-    } else {
-      setRanked(list.map(s => ({ ...s, _eligibility: { status: 'unknown' as any, reasons: [], improvements: [] }, _score: 0 })));
+      return rankScholarships(list, profile) as Array<Scholarship & { _eligibility: EligibilityResult; _score: number }>;
     }
+    return list.map(s => ({ ...s, _eligibility: { status: 'unknown' as EligibilityStatus, reasons: [], improvements: [] }, _score: 0 }));
   }, [allScholarships, filters.search, filters.intake, profile]);
 
   const handleFilterChange = (key: string, value: string) => {

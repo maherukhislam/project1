@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -93,15 +93,19 @@ const AdminStudents: React.FC = () => {
     }
   }, [students, selectedStudent]);
 
-  const applicationsByUser = applications.reduce((acc: Record<string, any[]>, app: any) => {
-    (acc[app.user_id] ||= []).push(app);
-    return acc;
-  }, {});
+  const applicationsByUser = useMemo(() =>
+    applications.reduce((acc: Record<string, any[]>, app: any) => {
+      (acc[app.user_id] ||= []).push(app);
+      return acc;
+    }, {}),
+  [applications]);
 
-  const documentsByUser = documents.reduce((acc: Record<string, any[]>, doc: any) => {
-    (acc[doc.user_id] ||= []).push(doc);
-    return acc;
-  }, {});
+  const documentsByUser = useMemo(() =>
+    documents.reduce((acc: Record<string, any[]>, doc: any) => {
+      (acc[doc.user_id] ||= []).push(doc);
+      return acc;
+    }, {}),
+  [documents]);
 
   const getStage = (student: any) => {
     const studentApps = applicationsByUser[student.user_id] || [];
@@ -115,26 +119,30 @@ const AdminStudents: React.FC = () => {
     return 'new_lead';
   };
 
-  const filteredStudents = students
-    .filter((student) => {
-      const matchesSearch =
-        !search ||
-        student.name?.toLowerCase().includes(search.toLowerCase()) ||
-        student.email?.toLowerCase().includes(search.toLowerCase());
-      const stage = getStage(student);
-      const matchesStage = stageFilter === 'all' || stage === stageFilter;
-      return matchesSearch && matchesStage;
-    })
-    .sort((a, b) => (b.profile_completion || 0) - (a.profile_completion || 0));
+  const filteredStudents = useMemo(() =>
+    students
+      .filter((student) => {
+        const matchesSearch =
+          !search ||
+          student.name?.toLowerCase().includes(search.toLowerCase()) ||
+          student.email?.toLowerCase().includes(search.toLowerCase());
+        const stage = getStage(student);
+        const matchesStage = stageFilter === 'all' || stage === stageFilter;
+        return matchesSearch && matchesStage;
+      })
+      .sort((a, b) => (b.profile_completion || 0) - (a.profile_completion || 0)),
+  [students, search, stageFilter, applicationsByUser]);
 
   const selectedApps = selectedStudent ? (applicationsByUser[selectedStudent.user_id] || []) : [];
   const selectedDocs = selectedStudent ? (documentsByUser[selectedStudent.user_id] || []) : [];
   const selectedStage = selectedStudent ? getStage(selectedStudent) : 'new_lead';
 
-  const totalStudents = students.length;
-  const readyStudents = students.filter((student) => (student.profile_completion || 0) >= 80).length;
-  const activeApplicants = students.filter((student) => (applicationsByUser[student.user_id] || []).length > 0).length;
-  const needsAttention = students.filter((student) => (student.profile_completion || 0) < 60 && !(applicationsByUser[student.user_id] || []).length).length;
+  const { totalStudents, readyStudents, activeApplicants, needsAttention } = useMemo(() => ({
+    totalStudents:    students.length,
+    readyStudents:    students.filter((s) => (s.profile_completion || 0) >= 80).length,
+    activeApplicants: students.filter((s) => (applicationsByUser[s.user_id] || []).length > 0).length,
+    needsAttention:   students.filter((s) => (s.profile_completion || 0) < 60 && !(applicationsByUser[s.user_id] || []).length).length
+  }), [students, applicationsByUser]);
 
   const updateApplicationStatus = async (appId: number, status: string) => {
     try {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CmsProvider } from './contexts/CmsContext';
@@ -8,66 +8,60 @@ import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Public Pages
-import Home from './pages/Home';
-import About from './pages/About';
-import Services from './pages/Services';
-import Destinations from './pages/Destinations';
-import Universities from './pages/Universities';
-import Scholarships from './pages/Scholarships';
-import Blog from './pages/Blog';
-import Contact from './pages/Contact';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
+const Home           = lazy(() => import('./pages/Home'));
+const About          = lazy(() => import('./pages/About'));
+const Services       = lazy(() => import('./pages/Services'));
+const Destinations   = lazy(() => import('./pages/Destinations'));
+const Universities   = lazy(() => import('./pages/Universities'));
+const Scholarships   = lazy(() => import('./pages/Scholarships'));
+const Blog           = lazy(() => import('./pages/Blog'));
+const Contact        = lazy(() => import('./pages/Contact'));
+const Login          = lazy(() => import('./pages/Login'));
+const Signup         = lazy(() => import('./pages/Signup'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword  = lazy(() => import('./pages/ResetPassword'));
+const Terms          = lazy(() => import('./pages/Terms'));
+const Privacy        = lazy(() => import('./pages/Privacy'));
 
 // Shared
-import ChangePassword from './pages/Shared/ChangePassword';
+const ChangePassword = lazy(() => import('./pages/Shared/ChangePassword'));
 
 // Dashboard Pages
-import DashboardLayout from './pages/dashboard/DashboardLayout';
-import DashboardHome from './pages/dashboard/DashboardHome';
-import Profile from './pages/dashboard/Profile';
-import UniversityMatch from './pages/dashboard/UniversityMatch';
-import Applications from './pages/dashboard/Applications';
-import Documents from './pages/dashboard/Documents';
+const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'));
+const DashboardHome   = lazy(() => import('./pages/dashboard/DashboardHome'));
+const Profile         = lazy(() => import('./pages/dashboard/Profile'));
+const UniversityMatch = lazy(() => import('./pages/dashboard/UniversityMatch'));
+const Applications    = lazy(() => import('./pages/dashboard/Applications'));
+const Documents       = lazy(() => import('./pages/dashboard/Documents'));
 
 // Admin Pages
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminStudents from './pages/admin/AdminStudents';
-import AdminAdmins from './pages/admin/AdminAdmins';
-import AdminApplications from './pages/admin/AdminApplications';
-import AdminUniversities from './pages/admin/AdminUniversities';
-import AdminPrograms from './pages/admin/AdminPrograms';
-import AdminScholarships from './pages/admin/AdminScholarships';
-import AdminDocuments from './pages/admin/AdminDocuments';
-import AdminBlog from './pages/admin/AdminBlog';
-import AdminCMS from './pages/admin/AdminCMS';
+const AdminLayout       = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard    = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminStudents     = lazy(() => import('./pages/admin/AdminStudents'));
+const AdminAdmins       = lazy(() => import('./pages/admin/AdminAdmins'));
+const AdminApplications = lazy(() => import('./pages/admin/AdminApplications'));
+const AdminUniversities = lazy(() => import('./pages/admin/AdminUniversities'));
+const AdminPrograms     = lazy(() => import('./pages/admin/AdminPrograms'));
+const AdminScholarships = lazy(() => import('./pages/admin/AdminScholarships'));
+const AdminDocuments    = lazy(() => import('./pages/admin/AdminDocuments'));
+const AdminBlog         = lazy(() => import('./pages/admin/AdminBlog'));
+const AdminCMS          = lazy(() => import('./pages/admin/AdminCMS'));
 
 // Handle Google redirect on app load
 handleGoogleRedirect();
 
+const PageFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-sky-50">
+    <LoadingSpinner size="lg" />
+  </div>
+);
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const { user, profile, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-sky-50">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (adminOnly && profile?.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (loading) return <PageFallback />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (adminOnly && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 };
@@ -83,71 +77,73 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 function App() {
   return (
     <CmsProvider>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-          <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-          <Route path="/services" element={<PublicLayout><Services /></PublicLayout>} />
-          <Route path="/destinations" element={<PublicLayout><Destinations /></PublicLayout>} />
-          <Route path="/universities" element={<PublicLayout><Universities /></PublicLayout>} />
-          <Route path="/scholarships" element={<PublicLayout><Scholarships /></PublicLayout>} />
-          <Route path="/blog" element={<PublicLayout><Blog /></PublicLayout>} />
-          <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/terms" element={<PublicLayout><Terms /></PublicLayout>} />
-          <Route path="/privacy" element={<PublicLayout><Privacy /></PublicLayout>} />
+      <AuthProvider>
+        <BrowserRouter>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/"                 element={<PublicLayout><Home /></PublicLayout>} />
+              <Route path="/about"            element={<PublicLayout><About /></PublicLayout>} />
+              <Route path="/services"         element={<PublicLayout><Services /></PublicLayout>} />
+              <Route path="/destinations"     element={<PublicLayout><Destinations /></PublicLayout>} />
+              <Route path="/universities"     element={<PublicLayout><Universities /></PublicLayout>} />
+              <Route path="/scholarships"     element={<PublicLayout><Scholarships /></PublicLayout>} />
+              <Route path="/blog"             element={<PublicLayout><Blog /></PublicLayout>} />
+              <Route path="/contact"          element={<PublicLayout><Contact /></PublicLayout>} />
+              <Route path="/login"            element={<Login />} />
+              <Route path="/signup"           element={<Signup />} />
+              <Route path="/forgot-password"  element={<ForgotPassword />} />
+              <Route path="/reset-password"   element={<ResetPassword />} />
+              <Route path="/terms"            element={<PublicLayout><Terms /></PublicLayout>} />
+              <Route path="/privacy"          element={<PublicLayout><Privacy /></PublicLayout>} />
 
-          {/* Student Dashboard Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardHome />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="match" element={<UniversityMatch />} />
-            <Route path="applications" element={<Applications />} />
-            <Route path="documents" element={<Documents />} />
-            <Route path="scholarships" element={<Scholarships />} />
-            <Route path="universities" element={<Universities />} />
-            <Route path="change-password" element={<ChangePassword />} />
-          </Route>
+              {/* Student Dashboard Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index             element={<DashboardHome />} />
+                <Route path="profile"    element={<Profile />} />
+                <Route path="match"      element={<UniversityMatch />} />
+                <Route path="applications" element={<Applications />} />
+                <Route path="documents"  element={<Documents />} />
+                <Route path="scholarships" element={<Scholarships />} />
+                <Route path="universities" element={<Universities />} />
+                <Route path="change-password" element={<ChangePassword />} />
+              </Route>
 
-          {/* Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="students" element={<AdminStudents />} />
-            <Route path="admins" element={<AdminAdmins />} />
-            <Route path="applications" element={<AdminApplications />} />
-            <Route path="universities" element={<AdminUniversities />} />
-            <Route path="programs" element={<AdminPrograms />} />
-            <Route path="scholarships" element={<AdminScholarships />} />
-            <Route path="documents" element={<AdminDocuments />} />
-            <Route path="blog" element={<AdminBlog />} />
-            <Route path="cms" element={<AdminCMS />} />
-            <Route path="change-password" element={<ChangePassword />} />
-          </Route>
+              {/* Admin Routes */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index                element={<AdminDashboard />} />
+                <Route path="students"      element={<AdminStudents />} />
+                <Route path="admins"        element={<AdminAdmins />} />
+                <Route path="applications"  element={<AdminApplications />} />
+                <Route path="universities"  element={<AdminUniversities />} />
+                <Route path="programs"      element={<AdminPrograms />} />
+                <Route path="scholarships"  element={<AdminScholarships />} />
+                <Route path="documents"     element={<AdminDocuments />} />
+                <Route path="blog"          element={<AdminBlog />} />
+                <Route path="cms"           element={<AdminCMS />} />
+                <Route path="change-password" element={<ChangePassword />} />
+              </Route>
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </AuthProvider>
     </CmsProvider>
   );
 }

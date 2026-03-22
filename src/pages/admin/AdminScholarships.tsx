@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Award, Plus, Search, Edit2, Trash2, X, Save, DollarSign,
@@ -161,15 +161,17 @@ const AdminScholarships: React.FC = () => {
     } catch (err) { console.error(err); }
   };
 
-  const filtered = scholarships.filter(s => {
-    const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.universities?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchActive =
-      filterActive === 'all'      ? true :
-      filterActive === 'active'   ? s.is_active :
+  const filtered = useMemo(() =>
+    scholarships.filter(s => {
+      const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) ||
+        s.universities?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchActive =
+        filterActive === 'all'    ? true :
+        filterActive === 'active' ? s.is_active :
                                     !s.is_active;
-    return matchSearch && matchActive;
-  });
+      return matchSearch && matchActive;
+    }),
+  [scholarships, search, filterActive]);
 
   const getFundingColour = (type: string) => {
     const m: Record<string, string> = {

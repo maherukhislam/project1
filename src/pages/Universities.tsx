@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useDebounce } from '../hooks/useDebounce';
 import { Search, Filter, MapPin, Star, GraduationCap, DollarSign, Award, X } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -20,6 +21,13 @@ const Universities: React.FC = () => {
     maxTuition: searchParams.get('maxTuition') || '',
     scholarship: searchParams.get('scholarship') || ''
   });
+
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  useEffect(() => {
+    setFilters(f => ({ ...f, search: debouncedSearch }));
+  }, [debouncedSearch]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,7 +57,7 @@ const Universities: React.FC = () => {
   const handleFilterChange = (key: string, value: string) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    
+
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([k, v]) => {
       if (v) params.set(k, v);
@@ -58,6 +66,7 @@ const Universities: React.FC = () => {
   };
 
   const clearFilters = () => {
+    setSearchInput('');
     setFilters({ search: '', country: '', degreeLevel: '', maxTuition: '', scholarship: '' });
     setSearchParams({});
   };
@@ -100,8 +109,8 @@ const Universities: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Search universities..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/50 border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all"
                 />
               </div>

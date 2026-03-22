@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   FileText,
@@ -86,23 +86,28 @@ const AdminApplications: React.FC = () => {
     }
   };
 
-  const filteredApps = applications.filter((app) => {
-    const matchesSearch =
-      !search ||
-      app.profiles?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      app.profiles?.email?.toLowerCase().includes(search.toLowerCase()) ||
-      app.programs?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      app.programs?.universities?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = !statusFilter || app.status === statusFilter;
-    const matchesUni = !universityFilter || app.programs?.universities?.name === universityFilter;
-    return matchesSearch && matchesStatus && matchesUni;
-  });
+  const filteredApps = useMemo(() =>
+    applications.filter((app) => {
+      const matchesSearch =
+        !search ||
+        app.profiles?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        app.profiles?.email?.toLowerCase().includes(search.toLowerCase()) ||
+        app.programs?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        app.programs?.universities?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = !statusFilter || app.status === statusFilter;
+      const matchesUni = !universityFilter || app.programs?.universities?.name === universityFilter;
+      return matchesSearch && matchesStatus && matchesUni;
+    }),
+  [applications, search, statusFilter, universityFilter]);
 
   const visibleStatuses = statusFilter ? [statusFilter] : statuses;
-  const totalApplications = applications.length;
-  const reviewCount = (applications.filter((app) => ['submitted', 'under_review'].includes(app.status)).length);
-  const decisionCount = applications.filter((app) => ['accepted', 'rejected'].includes(app.status)).length;
-  const visaCount = applications.filter((app) => app.status === 'visa_processing').length;
+
+  const { totalApplications, reviewCount, decisionCount, visaCount } = useMemo(() => ({
+    totalApplications: applications.length,
+    reviewCount:       applications.filter((a) => ['submitted', 'under_review'].includes(a.status)).length,
+    decisionCount:     applications.filter((a) => ['accepted', 'rejected'].includes(a.status)).length,
+    visaCount:         applications.filter((a) => a.status === 'visa_processing').length
+  }), [applications]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
