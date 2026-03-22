@@ -227,8 +227,8 @@ export async function onRequest(context) {
       }
     });
   } catch (err) {
-    console.error('Student report error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Failed to generate report' }), {
+    console.error('[admin/students-report] error:', err);
+    return new Response(JSON.stringify({ error: 'An internal error occurred. Please try again.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

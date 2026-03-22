@@ -421,7 +421,7 @@ export async function onRequest(context) {
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   } catch (err) {
-    console.error('Applications error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
+    console.error('[applications] error:', err);
+    return new Response(JSON.stringify({ error: 'An internal error occurred. Please try again.' }), { status: 500, headers });
   }
 }

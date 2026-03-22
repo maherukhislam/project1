@@ -125,7 +125,7 @@ export async function onRequest(context) {
       { headers }
     );
   } catch (err) {
-    console.error('Admin stats error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
+    console.error('[admin/stats] error:', err);
+    return new Response(JSON.stringify({ error: 'An internal error occurred. Please try again.' }), { status: 500, headers });
   }
 }

@@ -1,7 +1,23 @@
 import { getSupabase, hasSupabaseServiceRoleKey } from './_supabase.js';
 import { computeProfileState, logAuditEvent } from './_matching.js';
 
-const DEFAULT_BOOTSTRAP_ADMIN_EMAIL = 'maherukhislam2007@gmail.com';
+// ── Bootstrap admin ───────────────────────────────────────────────────────────
+// Only configured via the FIRST_ADMIN_EMAIL environment variable — no hardcoded
+// fallback email. Set this in Cloudflare Pages dashboard during initial setup.
+const getBootstrapAdminEmail = (env) =>
+  (env.FIRST_ADMIN_EMAIL || '').toLowerCase().trim();
+
+// ── Fields users can never write to themselves ────────────────────────────────
+const USER_BLOCKED_FIELDS = new Set([
+  'role', 'user_id', 'email', 'id',
+  'profile_completion', 'profile_status',
+  'lead_score', 'lead_temperature',
+  'visa_risk_score', 'visa_risk_level',
+  'assigned_counselor_id', 'counselor_id',
+  'duplicate_flags', 'fraud_flags',
+  'document_requirements',
+  'created_at', 'updated_at',
+]);
 
 const buildDefaultName = (user) => {
   if (user.user_metadata?.name) return user.user_metadata.name;
@@ -18,7 +34,7 @@ const isRecursiveProfilesPolicyError = (error) =>
   Boolean(error?.message?.includes('infinite recursion detected in policy for relation "profiles"'));
 
 const buildFallbackProfile = (user, isBootstrapCandidate) => {
-  const role = user.user_metadata?.role || (isBootstrapCandidate ? 'admin' : 'student');
+  const role = isBootstrapCandidate ? 'admin' : 'student';
   const computed = computeProfileState({
     user_id: user.id,
     email: user.email,
@@ -42,11 +58,24 @@ const buildFallbackProfile = (user, isBootstrapCandidate) => {
   };
 };
 
+// ── Sanitize errors — never leak internal details in 500 responses ─────────────
+function internalError(err, label = 'Request') {
+  console.error(`[${label}] error:`, err);
+  // Check for known safe messages to surface
+  if (isRecursiveProfilesPolicyError(err)) {
+    return {
+      error: 'Database policy configuration error',
+      details: 'Apply supabase/rls_profiles.sql to fix the recursive RLS policy.'
+    };
+  }
+  return { error: 'An internal error occurred. Please try again.' };
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  const bootstrapAdminEmail = (env.FIRST_ADMIN_EMAIL || DEFAULT_BOOTSTRAP_ADMIN_EMAIL).toLowerCase();
-  
+  const bootstrapAdminEmail = getBootstrapAdminEmail(env);
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
@@ -71,7 +100,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'GET') {
-      const isBootstrapCandidate = user.email?.toLowerCase() === bootstrapAdminEmail;
+      const isBootstrapCandidate = bootstrapAdminEmail && user.email?.toLowerCase() === bootstrapAdminEmail;
       const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
 
       if (!error && data) {
@@ -93,7 +122,7 @@ export async function onRequest(context) {
         const fallbackProfile = buildFallbackProfile(user, isBootstrapCandidate);
         const details = hasSupabaseServiceRoleKey(env)
           ? 'The profiles table is rejecting its own RLS policy. Apply supabase/rls_profiles.sql to replace the recursive policy.'
-          : 'The server is querying Supabase without a service-role key, so recursive RLS on public.profiles is still being enforced. Set SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY / SUPABASE_SECRET_KEY) in Pages and apply supabase/rls_profiles.sql.';
+          : 'The server is querying Supabase without a service-role key, so recursive RLS on public.profiles is still being enforced. Set SUPABASE_SERVICE_ROLE_KEY in Pages and apply supabase/rls_profiles.sql.';
 
         return new Response(JSON.stringify({
           ...fallbackProfile,
@@ -106,8 +135,9 @@ export async function onRequest(context) {
         throw error;
       }
 
-      // Logic for new user profile creation
-      let role = isBootstrapCandidate ? 'admin' : 'student';
+      // New user — create profile
+      const isBootstrapNew = bootstrapAdminEmail && user.email?.toLowerCase() === bootstrapAdminEmail;
+      const role = isBootstrapNew ? 'admin' : 'student';
 
       const payload = {
         user_id: user.id,
@@ -126,7 +156,7 @@ export async function onRequest(context) {
 
       if (isRecursiveProfilesPolicyError(createError)) {
         return new Response(JSON.stringify({
-          ...buildFallbackProfile(user, isBootstrapCandidate),
+          ...buildFallbackProfile(user, isBootstrapNew),
           warning: 'Profile could not be persisted because the profiles RLS policy is recursive.'
         }), { headers });
       }
@@ -138,33 +168,56 @@ export async function onRequest(context) {
 
     if (request.method === 'PUT') {
       const updates = await request.json();
-      const normalizedUpdates = { ...updates };
 
-      if ('preferred_intake_name' in normalizedUpdates || 'preferred_intake_year' in normalizedUpdates) {
-        normalizedUpdates.intake = buildPreferredIntakeLabel(
-          normalizedUpdates.preferred_intake_name,
-          normalizedUpdates.preferred_intake_year
+      // ── Strip every field the user is not allowed to set ──────────────────
+      // This prevents role escalation, user_id spoofing, and tampering with
+      // system-managed fields regardless of what the request body contains.
+      const safeUpdates = {};
+      for (const [key, value] of Object.entries(updates)) {
+        if (!USER_BLOCKED_FIELDS.has(key)) {
+          safeUpdates[key] = value;
+        }
+      }
+
+      if ('preferred_intake_name' in safeUpdates || 'preferred_intake_year' in safeUpdates) {
+        safeUpdates.intake = buildPreferredIntakeLabel(
+          safeUpdates.preferred_intake_name,
+          safeUpdates.preferred_intake_year
         );
       }
 
+      // ── Read existing profile to preserve server-controlled fields ────────
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Role is always read from the database — never from request body or
+      // user_metadata (which the user can influence).
+      const isBootstrapCandidate = bootstrapAdminEmail && user.email?.toLowerCase() === bootstrapAdminEmail;
+      const existingRole = existingProfile?.role || (isBootstrapCandidate ? 'admin' : 'student');
+
       const mergedProfile = {
-        ...(await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()).data,
-        ...normalizedUpdates,
+        ...existingProfile,
+        ...safeUpdates,
         user_id: user.id,
         email: user.email,
-        name: updates.name || buildDefaultName(user),
-        role: user.user_metadata?.role || (user.email?.toLowerCase() === bootstrapAdminEmail ? 'admin' : 'student')
+        name: safeUpdates.name || existingProfile?.name || buildDefaultName(user),
+        role: existingRole,
       };
+
       const computed = computeProfileState(mergedProfile);
-      const isAdminRole = mergedProfile.role === 'admin';
+      const isAdminRole = existingRole === 'admin';
+
       const payload = {
+        ...safeUpdates,
         user_id: user.id,
         email: user.email,
         name: mergedProfile.name,
-        role: mergedProfile.role,
-        ...normalizedUpdates,
-        profile_completion: isAdminRole ? 100 : computed.profile_completion,
-        profile_status: isAdminRole ? 'complete' : computed.profile_status
+        role: existingRole,                                                     // always from DB
+        profile_completion: isAdminRole ? 100 : computed.profile_completion,   // always server-computed
+        profile_status:     isAdminRole ? 'complete' : computed.profile_status, // always server-computed
       };
 
       const { data, error } = await supabase
@@ -175,8 +228,8 @@ export async function onRequest(context) {
 
       if (isRecursiveProfilesPolicyError(error)) {
         return new Response(JSON.stringify({
-          ...buildFallbackProfile(user, user.email?.toLowerCase() === bootstrapAdminEmail),
-          ...updates,
+          ...buildFallbackProfile(user, isBootstrapCandidate),
+          ...safeUpdates,
           profile_completion: computed.profile_completion,
           profile_status: computed.profile_status,
           validation_errors: computed.validation_errors,
@@ -185,6 +238,7 @@ export async function onRequest(context) {
       }
 
       if (error) throw error;
+
       await logAuditEvent(supabase, {
         user_id: user.id,
         actor_user_id: user.id,
@@ -201,12 +255,6 @@ export async function onRequest(context) {
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   } catch (err) {
-    console.error('Profile error:', err);
-    const errorMessage = err?.message || 'Unknown error';
-    const details = errorMessage.includes('infinite recursion detected in policy for relation "profiles"')
-      ? 'Supabase RLS on public.profiles is recursively querying public.profiles. Apply supabase/rls_profiles.sql to replace the recursive policy with the non-recursive version.'
-      : undefined;
-
-    return new Response(JSON.stringify({ error: errorMessage, details }), { status: 500, headers });
+    return new Response(JSON.stringify(internalError(err, 'Profile')), { status: 500, headers });
   }
 }
