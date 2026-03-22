@@ -204,17 +204,24 @@ const AdminScholarships: React.FC = () => {
     </select>
   );
 
+  const toggleColours: Record<string, string> = {
+    sky:    'bg-sky-500',
+    indigo: 'bg-indigo-500',
+    rose:   'bg-rose-500',
+    amber:  'bg-amber-500',
+    green:  'bg-green-500'
+  };
+
   const toggle = (label: string, key: string, colour = 'sky') => (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <button
-        type="button"
-        onClick={() => setFormData((f: any) => ({ ...f, [key]: !f[key] }))}
-        className={`w-10 h-5 rounded-full transition-colors ${formData[key] ? `bg-${colour}-500` : 'bg-slate-600'} relative`}
-      >
-        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${formData[key] ? 'translate-x-5' : 'translate-x-0.5'}`} />
-      </button>
-      <span className="text-sm text-slate-300">{label}</span>
-    </label>
+    <div
+      className="flex items-center gap-2 cursor-pointer"
+      onClick={() => setFormData((f: any) => ({ ...f, [key]: !f[key] }))}
+    >
+      <div className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${formData[key] ? (toggleColours[colour] ?? 'bg-sky-500') : 'bg-slate-600'}`}>
+        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${formData[key] ? 'translate-x-5' : 'translate-x-0.5'}`} />
+      </div>
+      <span className="text-sm text-slate-300 select-none">{label}</span>
+    </div>
   );
 
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><LoadingSpinner size="lg" /></div>;
