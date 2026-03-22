@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, ShieldPlus, Mail, User, Copy, CheckCircle2 } from 'lucide-react';
+import { Shield, ShieldPlus, Mail, User, Copy, CheckCircle2, Briefcase } from 'lucide-react';
 import { api } from '../../lib/api';
 
 const AdminAdmins: React.FC = () => {
-  const [admins, setAdmins] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'admin' | 'counselor'>('counselor');
+  const [preferredCountry, setPreferredCountry] = useState('');
+  const [specializations, setSpecializations] = useState('');
+  const [capacity, setCapacity] = useState('30');
+  const [active, setActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -16,7 +21,7 @@ const AdminAdmins: React.FC = () => {
   const fetchAdmins = async () => {
     try {
       const data = await api.get('/api/admin/admins');
-      setAdmins(data);
+      setTeamMembers(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch admins');
     } finally {
@@ -36,14 +41,27 @@ const AdminAdmins: React.FC = () => {
     setTemporaryPassword('');
 
     try {
-      const result = await api.post('/api/admin/admins', { name, email });
-      setSuccess(`Admin account created for ${result.user.email}`);
+      const result = await api.post('/api/admin/admins', {
+        name,
+        email,
+        role,
+        preferred_country: role === 'counselor' ? preferredCountry : null,
+        counselor_specializations: role === 'counselor' ? specializations : '',
+        counselor_capacity: role === 'counselor' ? Number(capacity || 30) : 30,
+        counselor_active: role === 'counselor' ? active : true
+      });
+      setSuccess(`${role === 'counselor' ? 'Counselor' : 'Admin'} account created for ${result.user.email}`);
       setTemporaryPassword(result.temporaryPassword || '');
       setName('');
       setEmail('');
+      setPreferredCountry('');
+      setSpecializations('');
+      setCapacity('30');
+      setActive(true);
+      setRole('counselor');
       await fetchAdmins();
     } catch (err: any) {
-      setError(err.message || 'Failed to create admin');
+      setError(err.message || 'Failed to create team member');
     } finally {
       setSubmitting(false);
     }
@@ -59,17 +77,29 @@ const AdminAdmins: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Admin Management</h1>
-        <p className="text-slate-400">Create additional admin accounts and review current admins.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Admin & Counselor Roles</h1>
+        <p className="text-slate-400">Create operations users, set counselor capacity, and review the current team.</p>
       </div>
 
       <div className="rounded-2xl bg-slate-800/50 border border-slate-700 p-6">
         <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
           <ShieldPlus className="w-5 h-5 text-sky-400" />
-          Add new admin
+          Add team member
         </h2>
 
         <form onSubmit={createAdmin} className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-slate-300 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'admin' | 'counselor')}
+              className="w-full rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2.5 text-white"
+            >
+              <option value="counselor">Counselor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm text-slate-300 mb-1">Full Name</label>
             <div className="relative">
@@ -99,13 +129,60 @@ const AdminAdmins: React.FC = () => {
             </div>
           </div>
 
+          {role === 'counselor' && (
+            <>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Preferred Country</label>
+                <input
+                  value={preferredCountry}
+                  onChange={(e) => setPreferredCountry(e.target.value)}
+                  className="w-full rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2.5 text-white"
+                  placeholder="United Kingdom"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Capacity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  className="w-full rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2.5 text-white"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm text-slate-300 mb-1">Specializations</label>
+                <input
+                  value={specializations}
+                  onChange={(e) => setSpecializations(e.target.value)}
+                  className="w-full rounded-xl bg-slate-900/70 border border-slate-700 px-3 py-2.5 text-white"
+                  placeholder="United Kingdom, Business Administration, Canada"
+                />
+                <p className="mt-1 text-xs text-slate-500">Comma-separated countries or subject areas.</p>
+              </div>
+
+              <label className="md:col-span-2 inline-flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900"
+                />
+                Counselor is active for auto-assignment
+              </label>
+            </>
+          )}
+
           <div className="md:col-span-2">
             <button
               type="submit"
               disabled={submitting}
               className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-medium disabled:opacity-60"
             >
-              {submitting ? 'Creating...' : 'Create Admin'}
+              {submitting ? 'Creating...' : `Create ${role === 'counselor' ? 'Counselor' : 'Admin'}`}
             </button>
           </div>
         </form>
@@ -130,22 +207,53 @@ const AdminAdmins: React.FC = () => {
       <div className="rounded-2xl bg-slate-800/50 border border-slate-700 p-6">
         <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
           <Shield className="w-5 h-5 text-indigo-400" />
-          Existing admins
+          Team members
         </h2>
 
         {loading ? (
-          <p className="text-slate-400">Loading admins...</p>
-        ) : admins.length === 0 ? (
-          <p className="text-slate-400">No admin accounts found.</p>
+          <p className="text-slate-400">Loading team members...</p>
+        ) : teamMembers.length === 0 ? (
+          <p className="text-slate-400">No team members found.</p>
         ) : (
           <div className="space-y-3">
-            {admins.map((admin) => (
-              <div key={admin.id} className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 flex items-center justify-between">
+            {teamMembers.map((member) => (
+              <div key={member.id} className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-white font-medium">{admin.name}</p>
-                  <p className="text-slate-400 text-sm">{admin.email}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-white font-medium">{member.name}</p>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      member.role === 'counselor'
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'bg-sky-500/15 text-sky-300'
+                    }`}>
+                      {member.role}
+                    </span>
+                    {member.role === 'counselor' && (
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                        member.counselor_active === false
+                          ? 'bg-red-500/15 text-red-300'
+                          : 'bg-emerald-500/15 text-emerald-300'
+                      }`}>
+                        {member.counselor_active === false ? 'inactive' : 'active'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-400 text-sm">{member.email}</p>
+                  {member.role === 'counselor' && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-400">
+                      {member.preferred_country && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-700 px-2 py-1">
+                          <Briefcase className="h-3.5 w-3.5" />
+                          {member.preferred_country}
+                        </span>
+                      )}
+                      <span className="rounded-full border border-slate-700 px-2 py-1">
+                        Capacity {member.counselor_capacity || 30}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500">{new Date(admin.created_at).toLocaleDateString()}</p>
+                <p className="text-xs text-slate-500">{new Date(member.created_at).toLocaleDateString()}</p>
               </div>
             ))}
           </div>

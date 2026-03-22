@@ -47,6 +47,12 @@ const AdminDocuments    = lazy(() => import('./pages/admin/AdminDocuments'));
 const AdminBlog         = lazy(() => import('./pages/admin/AdminBlog'));
 const AdminCMS          = lazy(() => import('./pages/admin/AdminCMS'));
 
+// Counselor Pages
+const CounselorLayout       = lazy(() => import('./pages/counselor/CounselorLayout'));
+const CounselorDashboard    = lazy(() => import('./pages/counselor/CounselorDashboard'));
+const CounselorStudents     = lazy(() => import('./pages/counselor/CounselorStudents'));
+const CounselorApplications = lazy(() => import('./pages/counselor/CounselorApplications'));
+
 // Handle Google redirect on app load
 handleGoogleRedirect();
 
@@ -56,12 +62,20 @@ const PageFallback = () => (
   </div>
 );
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
+const getHomePath = (role?: string) => {
+  if (role === 'admin') return '/admin';
+  if (role === 'counselor') return '/counselor';
+  return '/dashboard';
+};
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({ children, allowedRoles }) => {
   const { user, profile, loading } = useAuth();
 
   if (loading) return <PageFallback />;
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && profile?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (allowedRoles?.length && !allowedRoles.includes(profile?.role || '')) {
+    return <Navigate to={getHomePath(profile?.role)} replace />;
+  }
 
   return <>{children}</>;
 };
@@ -120,7 +134,7 @@ function App() {
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute adminOnly>
+                  <ProtectedRoute allowedRoles={['admin']}>
                     <AdminLayout />
                   </ProtectedRoute>
                 }
@@ -135,6 +149,21 @@ function App() {
                 <Route path="documents"     element={<AdminDocuments />} />
                 <Route path="blog"          element={<AdminBlog />} />
                 <Route path="cms"           element={<AdminCMS />} />
+                <Route path="change-password" element={<ChangePassword />} />
+              </Route>
+
+              {/* Counselor Routes */}
+              <Route
+                path="/counselor"
+                element={
+                  <ProtectedRoute allowedRoles={['counselor']}>
+                    <CounselorLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<CounselorDashboard />} />
+                <Route path="students" element={<CounselorStudents />} />
+                <Route path="applications" element={<CounselorApplications />} />
                 <Route path="change-password" element={<ChangePassword />} />
               </Route>
 

@@ -216,6 +216,7 @@ const DashboardLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
+  if (profile?.role === 'counselor') return <Navigate to="/counselor" replace />;
 
   // Page label from current path
   const currentNav = NAV_ITEMS.find(n =>

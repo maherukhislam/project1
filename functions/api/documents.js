@@ -52,6 +52,7 @@ export async function onRequest(context) {
 
     const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', user.id).single();
     const isAdmin = profile?.role === 'admin';
+    const isCounselor = profile?.role === 'counselor';
 
     // ── GET ──────────────────────────────────────────────────────────────────
     if (request.method === 'GET') {
@@ -69,6 +70,29 @@ export async function onRequest(context) {
 
       if (isAdmin && userId) {
         query = query.eq('user_id', userId);
+      } else if (isCounselor) {
+        if (userId) {
+          const { data: studentProfile, error: studentProfileError } = await supabase
+            .from('profiles')
+            .select('user_id, assigned_counselor_id, role')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (studentProfileError) throw studentProfileError;
+          if (!studentProfile || studentProfile.role !== 'student' || studentProfile.assigned_counselor_id !== user.id) {
+            return err('Counselor access restricted to assigned students', 403);
+          }
+          query = query.eq('user_id', userId);
+        } else {
+          const { data: assignedStudents, error: assignedStudentsError } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('role', 'student')
+            .eq('assigned_counselor_id', user.id);
+          if (assignedStudentsError) throw assignedStudentsError;
+          const assignedIds = (assignedStudents || []).map((item) => item.user_id).filter(Boolean);
+          if (!assignedIds.length) return new Response(JSON.stringify([]), { headers: HEADERS });
+          query = query.in('user_id', assignedIds);
+        }
       } else if (!isAdmin) {
         query = query.eq('user_id', user.id);
       }
@@ -78,7 +102,7 @@ export async function onRequest(context) {
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
 
-      if (!isAdmin || !data?.length) {
+      if ((!isAdmin && !isCounselor) || !data?.length) {
         return new Response(JSON.stringify(data || []), { headers: HEADERS });
       }
 

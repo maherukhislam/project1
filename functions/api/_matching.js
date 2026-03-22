@@ -130,6 +130,7 @@ const FILE_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ENGLISH_MAX = { IELTS: 9, TOEFL: 120, Duolingo: 160, PTE: 90 };
 const INTAKE_PRIORITY = ['Spring', 'Summer', 'Fall', 'Winter'];
+const OPERATIONS_ROLES = new Set(['admin', 'counselor', 'editor']);
 
 const readNumber = (value) => (value === null || value === undefined || value === '' ? null : Number(value));
 const toDate = (value) => (value ? new Date(value) : null);
@@ -202,7 +203,7 @@ export function shouldTriggerRematch(existingProfile = {}, updates = {}) {
 }
 
 export function getRematchState(profile = {}) {
-  if (profile.role === 'admin') {
+  if (OPERATIONS_ROLES.has(profile.role)) {
     return {
       needs_rematch: false,
       last_matched_at: profile.last_matched_at || null,
@@ -467,6 +468,28 @@ function getBudgetRealism(profile = {}, profileState = null) {
 
 export function computeProfileState(profile = {}) {
   const normalizedProfile = withNormalizedProfileIntake(profile);
+  if (OPERATIONS_ROLES.has(normalizedProfile.role)) {
+    return {
+      ...normalizedProfile,
+      normalized_gpa: normalizeGpa(normalizedProfile),
+      normalized_english: normalizeEnglishScore(normalizedProfile.english_test_type, normalizedProfile.english_score),
+      gap_years: calculateGapYears(normalizedProfile),
+      english_test_required: false,
+      profile_completion: 100,
+      profile_status: 'complete',
+      validation_errors: {},
+      completion_details: {
+        required_fields: [],
+        valid_required_fields: [],
+        missing_required_fields: []
+      },
+      document_requirements: [],
+      budget_realism: { score: 0, category: 'not_applicable', reason: 'Operational account' },
+      blocking_reasons: [],
+      improvement_flags: []
+    };
+  }
+
   const countryRules = deriveCountryRules(normalizedProfile.preferred_country);
   const validation_errors = validateProfileInput(normalizedProfile);
   const englishTestRequired = shouldRequireEnglishTest(normalizedProfile, countryRules);
@@ -574,6 +597,24 @@ export function computeProfileStrength({ leadScore = 0, visaRiskScore = 0, docum
   if (documentReadinessScore !== null && documentReadinessScore !== undefined) score += documentReadinessScore * 0.15;
   if (matchScore !== null && matchScore !== undefined) score += matchScore * 0.1;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+export function deriveStudentPipelineStage(student = {}, applications = []) {
+  const profileState =
+    student.profile_completion !== undefined && student.profile_status
+      ? student
+      : computeProfileState(student);
+  const applicationRows = Array.isArray(applications) ? applications : [];
+
+  if (applicationRows.some((application) => application.status === 'completed')) return 'completed';
+  if (applicationRows.some((application) => application.status === 'visa_processing')) return 'visa_processing';
+  if (applicationRows.some((application) => application.status === 'accepted')) return 'offer_received';
+  if (applicationRows.some((application) => ['draft', 'submitted', 'under_review', 'rejected'].includes(application.status))) {
+    return 'applied';
+  }
+  if ((profileState.profile_completion || 0) >= 80) return 'ready_to_apply';
+  if ((profileState.profile_completion || 0) > 0) return 'profile_incomplete';
+  return 'new_lead';
 }
 
 export function detectDropOffStage({ profileState, applicationCount = 0, documentReadiness = null }) {
@@ -1079,13 +1120,14 @@ export async function suggestAlternatives(supabase, profileState, rejectedProgra
 export async function assignCounselor(supabase, { preferredCountry, preferredSubject } = {}) {
   const { data: counselors, error } = await supabase
     .from('profiles')
-    .select('user_id, name, preferred_country, counselor_specializations, counselor_capacity')
+    .select('user_id, name, preferred_country, counselor_specializations, counselor_capacity, counselor_active')
     .eq('role', 'counselor');
 
   if (error) throw error;
-  if (!counselors?.length) return null;
+  const activeCounselors = (counselors || []).filter((item) => item.counselor_active !== false);
+  if (!activeCounselors.length) return null;
 
-  const counselorIds = counselors.map((item) => item.user_id).filter(Boolean);
+  const counselorIds = activeCounselors.map((item) => item.user_id).filter(Boolean);
   const { data: workloads, error: workloadError } = await supabase
     .from('applications')
     .select('counselor_id, status')
@@ -1098,7 +1140,7 @@ export async function assignCounselor(supabase, { preferredCountry, preferredSub
     workloadCount.set(item.counselor_id, (workloadCount.get(item.counselor_id) || 0) + 1);
   });
 
-  const scored = counselors.map((counselor) => {
+  const scored = activeCounselors.map((counselor) => {
     const specializations = normalizeScalarList(counselor.counselor_specializations);
     const workload = workloadCount.get(counselor.user_id) || 0;
     const capacity = readNumber(counselor.counselor_capacity) || 30;

@@ -21,7 +21,8 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
 
-  const dashboardLink = profile?.role === 'admin' ? '/admin' : '/dashboard';
+  const dashboardLink =
+    profile?.role === 'admin' ? '/admin' : profile?.role === 'counselor' ? '/counselor' : '/dashboard';
 
   const handleSignOut = async () => {
     await signOut();

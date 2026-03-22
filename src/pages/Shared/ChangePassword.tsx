@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 const ChangePassword: React.FC = () => {
   const { updatePassword, profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'counselor';
 
   const [current, setCurrent]     = useState('');
   const [password, setPassword]   = useState('');

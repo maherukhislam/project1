@@ -2,6 +2,7 @@ import { getSupabase } from '../_supabase.js';
 import {
   computeDocumentReadiness,
   computeLeadScore,
+  deriveStudentPipelineStage,
   computeProfileState,
   computeProfileStrength,
   computeVisaRisk,
@@ -25,14 +26,6 @@ const ADMIN_UPDATABLE_FIELDS = new Set([
   'assigned_counselor_id',
   'document_requirements',
 ]);
-
-function deriveStage(student, applications = []) {
-  if (applications.some((app) => app.status === 'visa_processing' || app.status === 'accepted')) return 'visa';
-  if (applications.some((app) => ['submitted', 'under_review'].includes(app.status))) return 'review';
-  if (applications.length > 0) return 'applied';
-  if ((student.profile_completion || 0) >= 80) return 'profile_ready';
-  return 'new_lead';
-}
 
 function enrichStudent(student, applications = [], documents = []) {
   const profileState = computeProfileState(student);
@@ -60,7 +53,8 @@ function enrichStudent(student, applications = [], documents = []) {
       documentReadiness
     }),
     profile_strength_score: profileStrengthScore,
-    crm_stage: deriveStage(profileState, applications),
+    pipeline_stage: deriveStudentPipelineStage(profileState, applications),
+    crm_stage: deriveStudentPipelineStage(profileState, applications),
     application_count: applications.length
   };
 }
@@ -89,8 +83,14 @@ export async function onRequest(context) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return err('Invalid token', 401);
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', user.id).single();
-    if (profile?.role !== 'admin') return err('Admin access required', 403);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, user_id')
+      .eq('user_id', user.id)
+      .single();
+    const isAdmin = profile?.role === 'admin';
+    const isCounselor = profile?.role === 'counselor';
+    if (!isAdmin && !isCounselor) return err('Admin or counselor access required', 403);
 
     if (request.method === 'GET') {
       const url     = new URL(request.url);
@@ -106,6 +106,7 @@ export async function onRequest(context) {
           .eq('id', parseInt(id, 10))
           .single();
         if (error) throw error;
+        if (isCounselor && data.assigned_counselor_id !== user.id) return err('Counselor access restricted to assigned students', 403);
 
         const { data: applications, error: applicationsError } = await supabase
           .from('applications')
@@ -130,11 +131,12 @@ export async function onRequest(context) {
         .from('profiles')
         .select(
           minimal
-            ? 'id, user_id, name, email, profile_picture_url, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags'
+            ? 'id, user_id, name, email, profile_picture_url, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags, assigned_counselor_id'
             : '*'
         )
         .eq('role', 'student')
         .order('created_at', { ascending: false });
+      if (isCounselor) query = query.eq('assigned_counselor_id', user.id);
 
       if (limit > 0) query = query.limit(limit);
 
@@ -180,6 +182,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'PUT') {
+      if (!isAdmin) return err('Admin access required', 403);
       const body = await request.json();
       const { id } = body;
 

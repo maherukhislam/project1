@@ -141,17 +141,18 @@ export async function onRequest(context) {
       // New user — create profile
       const isBootstrapNew = bootstrapAdminEmail && user.email?.toLowerCase() === bootstrapAdminEmail;
       const role = isBootstrapNew ? 'admin' : 'student';
+      const isOperationalRole = role === 'admin' || role === 'counselor' || role === 'editor';
 
-        const payload = {
-          user_id: user.id,
-          email: user.email,
-          name: buildDefaultName(user),
-          role,
-          needs_rematch: role !== 'admin',
-          last_matched_at: null,
-          profile_completion: role === 'admin' ? 100 : 10,
-          profile_status: role === 'admin' ? 'complete' : 'incomplete'
-        };
+      const payload = {
+        user_id: user.id,
+        email: user.email,
+        name: buildDefaultName(user),
+        role,
+        needs_rematch: !isOperationalRole,
+        last_matched_at: null,
+        profile_completion: isOperationalRole ? 100 : 10,
+        profile_status: isOperationalRole ? 'complete' : 'incomplete'
+      };
 
       const { data: created, error: createError } = await supabase
         .from('profiles')
@@ -213,8 +214,8 @@ export async function onRequest(context) {
       };
 
       const computed = computeProfileState(mergedProfile);
-      const isAdminRole = existingRole === 'admin';
-      const rematchTriggered = existingRole !== 'admin' && shouldTriggerRematch(existingProfile || {}, safeUpdates);
+      const isOperationalRole = ['admin', 'counselor', 'editor'].includes(existingRole);
+      const rematchTriggered = !isOperationalRole && shouldTriggerRematch(existingProfile || {}, safeUpdates);
 
       const payload = {
         ...safeUpdates,
@@ -222,9 +223,9 @@ export async function onRequest(context) {
         email: user.email,
         name: mergedProfile.name,
         role: existingRole,                                                     // always from DB
-        profile_completion: isAdminRole ? 100 : computed.profile_completion,   // always server-computed
-        profile_status:     isAdminRole ? 'complete' : computed.profile_status, // always server-computed
-        needs_rematch: isAdminRole ? false : rematchTriggered || existingProfile?.needs_rematch || false,
+        profile_completion: isOperationalRole ? 100 : computed.profile_completion,   // always server-computed
+        profile_status:     isOperationalRole ? 'complete' : computed.profile_status, // always server-computed
+        needs_rematch: isOperationalRole ? false : rematchTriggered || existingProfile?.needs_rematch || false,
       };
 
       const { data, error } = await supabase

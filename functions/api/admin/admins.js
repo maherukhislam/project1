@@ -25,6 +25,15 @@ function err(msg, status = 400) {
   return new Response(JSON.stringify({ error: msg }), { status, headers: HEADERS });
 }
 
+function normalizeSpecializations(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -45,8 +54,8 @@ export async function onRequest(context) {
       if (request.method !== 'GET') return err('Method not allowed', 405);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, name, email, created_at, role')
-        .eq('role', 'admin')
+        .select('id, user_id, name, email, created_at, role, preferred_country, counselor_specializations, counselor_capacity, counselor_active')
+        .in('role', ['admin', 'counselor'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -55,12 +64,20 @@ export async function onRequest(context) {
 
     if (request.method === 'POST') {
       const body = await request.json().catch(() => ({}));
-      const name  = typeof body.name  === 'string' ? body.name.trim()  : '';
+      const name  = typeof body.name === 'string' ? body.name.trim() : '';
       const email = typeof body.email === 'string' ? body.email.trim() : '';
+      const role = body.role === 'counselor' ? 'counselor' : 'admin';
+      const preferredCountry = typeof body.preferred_country === 'string' ? body.preferred_country.trim() : null;
+      const counselorSpecializations = normalizeSpecializations(body.counselor_specializations);
+      const counselorCapacity = Number(body.counselor_capacity || 30);
+      const counselorActive = body.counselor_active !== false;
 
       if (!name)               return err('Name is required');
       if (name.length > 120)   return err('Name is too long');
       if (!isValidEmail(email)) return err('A valid email address is required');
+      if (role === 'counselor' && (!Number.isFinite(counselorCapacity) || counselorCapacity < 1 || counselorCapacity > 500)) {
+        return err('Counselor capacity must be between 1 and 500');
+      }
 
       const tempPassword = generateTemporaryPassword();
 
@@ -68,7 +85,7 @@ export async function onRequest(context) {
         email,
         password: tempPassword,
         email_confirm: true,
-        user_metadata: { name, role: 'admin' }
+        user_metadata: { name, role }
       });
 
       if (authCreateError) throw authCreateError;
@@ -77,8 +94,14 @@ export async function onRequest(context) {
         user_id: authData.user.id,
         name,
         email,
-        role: 'admin',
-        profile_completion: 100
+        role,
+        profile_completion: 100,
+        profile_status: 'complete',
+        needs_rematch: false,
+        preferred_country: role === 'counselor' ? preferredCountry : null,
+        counselor_specializations: role === 'counselor' ? counselorSpecializations : [],
+        counselor_capacity: role === 'counselor' ? counselorCapacity : 30,
+        counselor_active: role === 'counselor' ? counselorActive : true
       });
 
       if (profileError) throw profileError;
@@ -88,7 +111,7 @@ export async function onRequest(context) {
       // immediately on first login.
       return new Response(JSON.stringify({
         success: true,
-        user: { id: authData.user.id, email, name, role: 'admin' },
+        user: { id: authData.user.id, email, name, role },
         temporaryPassword: tempPassword,
         notice: 'Share this password through a secure channel. The recipient must change it on first login.'
       }), { status: 201, headers: HEADERS });

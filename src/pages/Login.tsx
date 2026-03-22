@@ -14,11 +14,12 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const homePath = profile?.role === 'admin' ? '/admin' : profile?.role === 'counselor' ? '/counselor' : '/dashboard';
 
   useEffect(() => {
     if (authLoading || !user) return;
-    navigate(profile?.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
-  }, [authLoading, user, profile?.role, navigate]);
+    navigate(homePath, { replace: true });
+  }, [authLoading, user, homePath, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

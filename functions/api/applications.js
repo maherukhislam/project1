@@ -103,6 +103,7 @@ export async function onRequest(context) {
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
     const isAdmin = profile?.role === 'admin';
+    const isCounselor = profile?.role === 'counselor';
 
     if (request.method === 'GET') {
       const url = new URL(request.url);
@@ -113,7 +114,8 @@ export async function onRequest(context) {
 
       if (countOnly) {
         let countQuery = supabase.from('applications').select('id', { count: 'exact', head: true });
-        if (!isAdmin) countQuery = countQuery.eq('user_id', user.id);
+        if (isCounselor) countQuery = countQuery.eq('counselor_id', user.id);
+        else if (!isAdmin) countQuery = countQuery.eq('user_id', user.id);
         if (status) countQuery = countQuery.eq('status', status);
         const { count, error } = await countQuery;
         if (error) throw error;
@@ -125,7 +127,8 @@ export async function onRequest(context) {
         : '*, programs(*, universities(id, name, country, logo_url, acceptance_rate))';
 
       let query = supabase.from('applications').select(selectFields);
-      if (!isAdmin) query = query.eq('user_id', user.id);
+      if (isCounselor) query = query.eq('counselor_id', user.id);
+      else if (!isAdmin) query = query.eq('user_id', user.id);
       if (status) query = query.eq('status', status);
       if (limit > 0) query = query.limit(limit);
 
@@ -138,7 +141,7 @@ export async function onRequest(context) {
         timeline: buildStatusTimeline(application, application.user_id)
       }));
 
-      if (!isAdmin || !normalized.length) {
+      if ((!isAdmin && !isCounselor) || !normalized.length) {
         return new Response(JSON.stringify(normalized), { headers });
       }
 
@@ -341,7 +344,16 @@ export async function onRequest(context) {
 
     if (request.method === 'PUT') {
       const { id, ...updates } = body;
-      if (!isAdmin && (updates.status || updates.counselor_id || updates.offer_type || updates.offer_received_at)) {
+      if (isCounselor) {
+        const counselorAllowedFields = new Set(['status', 'notes', 'offer_type', 'offer_received_at', 'offer_letter_file_url']);
+        for (const key of Object.keys(updates)) {
+          if (!counselorAllowedFields.has(key)) delete updates[key];
+        }
+        delete updates.counselor_id;
+        delete updates.admin_override;
+        delete updates.override_reason;
+      }
+      if (!isAdmin && !isCounselor && (updates.status || updates.counselor_id || updates.offer_type || updates.offer_received_at)) {
         delete updates.status;
         delete updates.counselor_id;
         delete updates.offer_type;
@@ -353,7 +365,8 @@ export async function onRequest(context) {
         .from('applications')
         .select('*, programs(*, universities(id, name, country, logo_url, acceptance_rate))')
         .eq('id', id);
-      if (!isAdmin) existingQuery = existingQuery.eq('user_id', user.id);
+      if (isCounselor) existingQuery = existingQuery.eq('counselor_id', user.id);
+      else if (!isAdmin) existingQuery = existingQuery.eq('user_id', user.id);
 
       const { data: currentApplication, error: currentError } = await existingQuery.single();
       if (currentError) throw currentError;
@@ -442,7 +455,8 @@ export async function onRequest(context) {
       };
 
       let updateQuery = supabase.from('applications').update(payload).eq('id', id);
-      if (!isAdmin) updateQuery = updateQuery.eq('user_id', user.id);
+      if (isCounselor) updateQuery = updateQuery.eq('counselor_id', user.id);
+      else if (!isAdmin) updateQuery = updateQuery.eq('user_id', user.id);
 
       const { data, error } = await updateQuery.select().single();
       if (error) throw error;
@@ -463,6 +477,9 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'DELETE') {
+      if (isAdmin || isCounselor) {
+        return new Response(JSON.stringify({ error: 'Only students can delete their own applications' }), { status: 403, headers });
+      }
       const { id } = body;
       const { error } = await supabase.from('applications').delete().eq('id', id).eq('user_id', user.id);
       if (error) throw error;

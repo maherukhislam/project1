@@ -22,47 +22,98 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 import supabase from '../../lib/supabase';
 import { generateStudentPdf } from '../../lib/generateStudentPdf';
+import { useAuth } from '../../contexts/AuthContext';
 
-const stageOrder = ['new_lead', 'profile_ready', 'applied', 'review', 'visa'] as const;
+const stageOrder = ['new_lead', 'profile_incomplete', 'ready_to_apply', 'applied', 'offer_received', 'visa_processing', 'completed'] as const;
 
 const stageMeta: Record<string, { label: string; tone: string; description: string }> = {
   new_lead: {
     label: 'New lead',
     tone: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    description: 'Fresh assignment or signup'
+  },
+  profile_incomplete: {
+    label: 'Profile incomplete',
+    tone: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     description: 'Needs profile completion'
   },
-  profile_ready: {
-    label: 'Profile ready',
+  ready_to_apply: {
+    label: 'Ready to apply',
     tone: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     description: 'Ready for application planning'
   },
   applied: {
     label: 'Applied',
     tone: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-    description: 'At least one draft or submitted case'
+    description: 'At least one active application'
   },
-  review: {
-    label: 'Under review',
-    tone: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    description: 'Waiting on counselor or school feedback'
-  },
-  visa: {
-    label: 'Visa stage',
+  offer_received: {
+    label: 'Offer received',
     tone: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    description: 'Accepted or in visa processing'
+    description: 'At least one accepted application'
+  },
+  visa_processing: {
+    label: 'Visa processing',
+    tone: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    description: 'Visa stage in progress'
+  },
+  completed: {
+    label: 'Completed',
+    tone: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+    description: 'Journey completed'
   }
 };
 
+const deriveStudentStage = (student: any, studentApps: any[]) => {
+  if (student?.pipeline_stage && stageMeta[student.pipeline_stage]) return student.pipeline_stage;
+  if (studentApps.some((app) => app.status === 'completed')) return 'completed';
+  if (studentApps.some((app) => app.status === 'visa_processing')) return 'visa_processing';
+  if (studentApps.some((app) => app.status === 'accepted')) return 'offer_received';
+  if (studentApps.some((app) => ['draft', 'submitted', 'under_review', 'rejected'].includes(app.status))) return 'applied';
+  if ((student.profile_completion || 0) >= 80) return 'ready_to_apply';
+  if ((student.profile_completion || 0) > 0) return 'profile_incomplete';
+  return 'new_lead';
+};
+
+const priorityScore = (student: any, stage: string) => {
+  const leadWeight = student.lead_temperature === 'Hot Lead' ? 24 : student.lead_temperature === 'Warm Lead' ? 12 : 4;
+  const stageWeight =
+    {
+      ready_to_apply: 18,
+      applied: 16,
+      offer_received: 14,
+      visa_processing: 10,
+      profile_incomplete: 8,
+      new_lead: 6,
+      completed: 0
+    }[stage] || 0;
+
+  return (
+    leadWeight +
+    stageWeight +
+    (student.profile_strength_score || 0) * 0.45 +
+    (student.lead_score || 0) * 0.25 +
+    ((student.document_readiness?.score || 0) < 100 ? 6 : 0)
+  );
+};
+
 const AdminStudents: React.FC = () => {
+  const { profile } = useAuth();
+  const isCounselor = profile?.role === 'counselor';
   const [students, setStudents] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
+  const [notesByUser, setNotesByUser] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<(typeof stageOrder)[number] | 'all'>('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'applications'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'applications' | 'notes'>('profile');
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [submittingNote, setSubmittingNote] = useState(false);
+  const selectedStudentNotesLoaded = selectedStudent?.user_id ? Boolean(notesByUser[selectedStudent.user_id]) : false;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -93,6 +144,26 @@ const AdminStudents: React.FC = () => {
     }
   }, [students, selectedStudent]);
 
+  useEffect(() => {
+    if (!selectedStudent?.user_id) return;
+    const fetchNotes = async () => {
+      setNotesLoading(true);
+      try {
+        const noteRows = await api.get('/api/notes', { user_id: selectedStudent.user_id });
+        setNotesByUser((current) => ({ ...current, [selectedStudent.user_id]: noteRows || [] }));
+      } catch (err) {
+        console.error('Failed to fetch notes:', err);
+      } finally {
+        setNotesLoading(false);
+      }
+    };
+
+    if (!selectedStudentNotesLoaded) {
+      fetchNotes();
+    }
+    setNoteDraft('');
+  }, [selectedStudent?.user_id, selectedStudentNotesLoaded]);
+
   const applicationsByUser = useMemo(() =>
     applications.reduce((acc: Record<string, any[]>, app: any) => {
       (acc[app.user_id] ||= []).push(app);
@@ -110,20 +181,7 @@ const AdminStudents: React.FC = () => {
   const studentStages = useMemo(() =>
     students.reduce((acc: Record<string, (typeof stageOrder)[number]>, student: any) => {
       const studentApps = applicationsByUser[student.user_id] || [];
-      const completion = student.profile_completion || 0;
-
-      if (studentApps.some((app) => app.status === 'visa_processing' || app.status === 'accepted')) {
-        acc[student.user_id] = 'visa';
-      } else if (studentApps.some((app) => ['submitted', 'under_review'].includes(app.status))) {
-        acc[student.user_id] = 'review';
-      } else if (studentApps.length > 0) {
-        acc[student.user_id] = 'applied';
-      } else if (completion >= 80) {
-        acc[student.user_id] = 'profile_ready';
-      } else {
-        acc[student.user_id] = 'new_lead';
-      }
-
+      acc[student.user_id] = deriveStudentStage(student, studentApps) as (typeof stageOrder)[number];
       return acc;
     }, {}),
   [students, applicationsByUser]);
@@ -139,12 +197,17 @@ const AdminStudents: React.FC = () => {
         const matchesStage = stageFilter === 'all' || stage === stageFilter;
         return matchesSearch && matchesStage;
       })
-      .sort((a, b) => (b.profile_completion || 0) - (a.profile_completion || 0)),
+      .sort((a, b) => {
+        const stageA = studentStages[a.user_id] || 'new_lead';
+        const stageB = studentStages[b.user_id] || 'new_lead';
+        return priorityScore(b, stageB) - priorityScore(a, stageA);
+      }),
   [students, search, stageFilter, studentStages]);
 
   const selectedApps = selectedStudent ? (applicationsByUser[selectedStudent.user_id] || []) : [];
   const selectedDocs = selectedStudent ? (documentsByUser[selectedStudent.user_id] || []) : [];
   const selectedStage = selectedStudent ? (studentStages[selectedStudent.user_id] || 'new_lead') : 'new_lead';
+  const selectedNotes = selectedStudent ? (notesByUser[selectedStudent.user_id] || []) : [];
 
   const { totalStudents, readyStudents, activeApplicants, needsAttention } = useMemo(() => ({
     totalStudents:    students.length,
@@ -161,6 +224,26 @@ const AdminStudents: React.FC = () => {
       );
     } catch (err) {
       console.error('Failed to update status:', err);
+    }
+  };
+
+  const submitNote = async () => {
+    if (!selectedStudent?.user_id || !noteDraft.trim()) return;
+    setSubmittingNote(true);
+    try {
+      const created = await api.post('/api/notes', {
+        student_user_id: selectedStudent.user_id,
+        note: noteDraft.trim()
+      });
+      setNotesByUser((current) => ({
+        ...current,
+        [selectedStudent.user_id]: [created, ...(current[selectedStudent.user_id] || [])]
+      }));
+      setNoteDraft('');
+    } catch (err) {
+      console.error('Failed to save note:', err);
+    } finally {
+      setSubmittingNote(false);
     }
   };
 
@@ -229,11 +312,13 @@ const AdminStudents: React.FC = () => {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">
-              CRM view
+              {isCounselor ? 'Counselor desk' : 'CRM view'}
             </div>
-            <h1 className="mt-4 text-3xl font-bold text-white">Leads / Students</h1>
+            <h1 className="mt-4 text-3xl font-bold text-white">{isCounselor ? 'My Students' : 'Leads / Students'}</h1>
             <p className="mt-2 max-w-2xl text-slate-400">
-              Track each student from profile completion to application progress in a single admissions pipeline.
+              {isCounselor
+                ? 'Work assigned students by priority, keep notes, and move each case through the admissions pipeline.'
+                : 'Track each student from profile completion to application progress in a single admissions pipeline.'}
             </p>
           </div>
 
@@ -296,7 +381,6 @@ const AdminStudents: React.FC = () => {
             {filteredStudents.length > 0 ? filteredStudents.map((student, index) => {
               const stage = studentStages[student.user_id] || 'new_lead';
               const stageInfoItem = stageMeta[stage];
-              const studentApps = applicationsByUser[student.user_id] || [];
               const studentDocs = documentsByUser[student.user_id] || [];
 
               return (
@@ -351,13 +435,17 @@ const AdminStudents: React.FC = () => {
                     </div>
 
                     <div>
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Applications</p>
-                      <p className="mt-2 text-sm font-semibold text-white">{studentApps.length}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Lead / Strength</p>
+                      <p className="mt-2 text-sm font-semibold text-white">
+                        {student.lead_score || 0} / {student.profile_strength_score || 0}
+                      </p>
                     </div>
 
                     <div>
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Documents</p>
-                      <p className="mt-2 text-sm font-semibold text-white">{studentDocs.length}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Visa / Docs</p>
+                      <p className="mt-2 text-sm font-semibold text-white">
+                        {student.visa_risk_level || 'Unknown'} • {student.document_readiness?.score || studentDocs.length || 0}
+                      </p>
                     </div>
                   </div>
                 </motion.button>
@@ -399,20 +487,31 @@ const AdminStudents: React.FC = () => {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={downloadStudentPdf}
-                    disabled={downloadingReport}
-                    className="inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-70"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    {downloadingReport ? 'Generating PDF...' : 'Download PDF'}
-                  </button>
+                  {!isCounselor && (
+                    <button
+                      type="button"
+                      onClick={downloadStudentPdf}
+                      disabled={downloadingReport}
+                      className="inline-flex items-center gap-2 rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-70"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {downloadingReport ? 'Generating PDF...' : 'Download PDF'}
+                    </button>
+                  )}
                   <span className={`rounded-full border px-3 py-1 text-xs font-medium ${selectedStage ? stageMeta[selectedStage].tone : 'bg-slate-500/20 text-slate-300 border-slate-500/30'}`}>
                     {selectedStage ? stageMeta[selectedStage].label : 'New lead'}
                   </span>
                   <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
                     Profile {selectedStudent.profile_completion || 0}%
+                  </span>
+                  <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+                    Lead {selectedStudent.lead_score || 0}
+                  </span>
+                  <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+                    Strength {selectedStudent.profile_strength_score || 0}
+                  </span>
+                  <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
+                    Docs {selectedStudent.document_readiness?.score || 0}%
                   </span>
                   <span className="rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-300">
                     {applicationsByUser[selectedStudent.user_id]?.length || 0} applications
@@ -421,7 +520,7 @@ const AdminStudents: React.FC = () => {
               </div>
 
               <div className="flex border-b border-slate-700">
-                {(['profile', 'documents', 'applications'] as const).map((tab) => (
+                {(['profile', 'documents', 'applications', 'notes'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -451,6 +550,10 @@ const AdminStudents: React.FC = () => {
                         { icon: CheckCircle, label: 'Completion', value: `${selectedStudent.profile_completion || 0}%` },
                         { icon: FileText, label: 'Preferred Country', value: selectedStudent.preferred_country },
                         { icon: FileText, label: 'Preferred Subject', value: selectedStudent.preferred_subject },
+                        { icon: CheckCircle, label: 'Lead Score', value: selectedStudent.lead_score },
+                        { icon: CheckCircle, label: 'Profile Strength', value: selectedStudent.profile_strength_score },
+                        { icon: Clock, label: 'Visa Risk', value: selectedStudent.visa_risk_level },
+                        { icon: FileText, label: 'Document Readiness', value: `${selectedStudent.document_readiness?.score || 0}%` },
                         {
                           icon: FileText,
                           label: 'Budget Range',
@@ -571,6 +674,59 @@ const AdminStudents: React.FC = () => {
                       <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-8 text-center">
                         <FileText className="mx-auto mb-3 h-12 w-12 text-slate-600" />
                         <p className="text-slate-400">No applications yet</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'notes' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4">
+                      <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-slate-500">
+                        Internal note
+                      </label>
+                      <textarea
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        rows={4}
+                        placeholder="Add counselor context, follow-up notes, or student interaction history..."
+                        className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-white outline-none focus:border-sky-500"
+                      />
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={submitNote}
+                          disabled={submittingNote || !noteDraft.trim()}
+                          className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 disabled:opacity-60"
+                        >
+                          {submittingNote ? 'Saving...' : 'Save note'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {notesLoading ? (
+                      <div className="flex items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/40 p-8">
+                        <LoadingSpinner size="md" />
+                      </div>
+                    ) : selectedNotes.length > 0 ? (
+                      selectedNotes.map((note) => (
+                        <div key={note.id} className="rounded-2xl border border-slate-700 bg-slate-900/50 p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-semibold text-white">{note.author?.name || 'Team member'}</p>
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{note.author_role}</p>
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              {note.created_at ? new Date(note.created_at).toLocaleString() : '-'}
+                            </p>
+                          </div>
+                          <p className="mt-3 whitespace-pre-wrap text-sm text-slate-300">{note.note}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-8 text-center">
+                        <FileText className="mx-auto mb-3 h-12 w-12 text-slate-600" />
+                        <p className="text-slate-400">No internal notes yet</p>
                       </div>
                     )}
                   </div>
