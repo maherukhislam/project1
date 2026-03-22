@@ -1,5 +1,12 @@
 import { getSupabase } from '../_supabase.js';
-import { computeLeadScore, computeProfileState, computeVisaRisk } from '../_matching.js';
+import {
+  computeDocumentReadiness,
+  computeLeadScore,
+  computeProfileState,
+  computeProfileStrength,
+  computeVisaRisk,
+  detectDropOffStage
+} from '../_matching.js';
 
 // ── Allowlist: only these profile fields may be updated via admin PUT ─────────
 // Anything not listed here is silently dropped. This prevents overwriting
@@ -27,10 +34,16 @@ function deriveStage(student, applications = []) {
   return 'new_lead';
 }
 
-function enrichStudent(student, applications = []) {
+function enrichStudent(student, applications = [], documents = []) {
   const profileState = computeProfileState(student);
   const lead = computeLeadScore(profileState, applications.length);
-  const visaRisk = computeVisaRisk(profileState);
+  const documentReadiness = computeDocumentReadiness(profileState, documents);
+  const visaRisk = computeVisaRisk(profileState, null, { documentReadiness });
+  const profileStrengthScore = computeProfileStrength({
+    leadScore: lead.score,
+    visaRiskScore: visaRisk.score,
+    documentReadinessScore: documentReadiness.score
+  });
 
   return {
     ...student,
@@ -40,6 +53,13 @@ function enrichStudent(student, applications = []) {
     lead_temperature: lead.temperature,
     visa_risk_score: visaRisk.score,
     visa_risk_level: visaRisk.level,
+    document_readiness: documentReadiness,
+    drop_off_stage: detectDropOffStage({
+      profileState,
+      applicationCount: applications.length,
+      documentReadiness
+    }),
+    profile_strength_score: profileStrengthScore,
     crm_stage: deriveStage(profileState, applications),
     application_count: applications.length
   };
@@ -94,8 +114,14 @@ export async function onRequest(context) {
           .order('created_at', { ascending: false });
         if (applicationsError) throw applicationsError;
 
+        const { data: documents, error: documentsError } = await supabase
+          .from('documents')
+          .select('document_type, status, quality_flag, quality_flags')
+          .eq('user_id', data.user_id);
+        if (documentsError) throw documentsError;
+
         return new Response(
-          JSON.stringify({ ...enrichStudent(data, applications || []), applications: applications || [] }),
+          JSON.stringify({ ...enrichStudent(data, applications || [], documents || []), applications: applications || [] }),
           { headers: HEADERS }
         );
       }
@@ -117,13 +143,16 @@ export async function onRequest(context) {
 
       const userIds = (data || []).map((item) => item.user_id).filter(Boolean);
       let applications = [];
+      let documents = [];
       if (userIds.length) {
-        const { data: applicationRows, error: applicationsError } = await supabase
-          .from('applications')
-          .select('user_id, status')
-          .in('user_id', userIds);
+        const [{ data: applicationRows, error: applicationsError }, { data: documentRows, error: documentsError }] = await Promise.all([
+          supabase.from('applications').select('user_id, status').in('user_id', userIds),
+          supabase.from('documents').select('user_id, document_type, status, quality_flag, quality_flags').in('user_id', userIds)
+        ]);
         if (applicationsError) throw applicationsError;
+        if (documentsError) throw documentsError;
         applications = applicationRows || [];
+        documents = documentRows || [];
       }
 
       const applicationsByUser = new Map();
@@ -133,8 +162,19 @@ export async function onRequest(context) {
         applicationsByUser.set(application.user_id, items);
       });
 
+      const documentsByUser = new Map();
+      (documents || []).forEach((document) => {
+        const items = documentsByUser.get(document.user_id) || [];
+        items.push(document);
+        documentsByUser.set(document.user_id, items);
+      });
+
       const enriched = (data || []).map((student) =>
-        enrichStudent(student, applicationsByUser.get(student.user_id) || [])
+        enrichStudent(
+          student,
+          applicationsByUser.get(student.user_id) || [],
+          documentsByUser.get(student.user_id) || []
+        )
       );
       return new Response(JSON.stringify(enriched), { headers: HEADERS });
     }

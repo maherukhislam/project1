@@ -2,7 +2,9 @@ import { getSupabase } from './_supabase.js';
 import {
   assignCounselor,
   buildDeadlineSnapshot,
+  computeDocumentReadiness,
   computeLeadScore,
+  computeProfileStrength,
   computeProfileState,
   computeVisaRisk,
   deriveCountryRules,
@@ -176,14 +178,25 @@ export async function onRequest(context) {
       ]);
 
       const countryRules = deriveCountryRules(program.universities?.country, countryRecord);
-      const programEvaluation = evaluateProgram(profileState, program, countryRules, scholarships || []);
-      const requiredDocuments = getDocumentRequirements({ ...profileState, preferred_country: program.universities?.country });
+      const lead = computeLeadScore(profileState);
+      const documentReadiness = computeDocumentReadiness(
+        { ...profileState, preferred_country: program.universities?.country },
+        documents || []
+      );
+      const enrichedProfile = { ...profileState, lead_score: lead.score, lead_temperature: lead.temperature };
+      const programEvaluation = evaluateProgram(
+        enrichedProfile,
+        program,
+        countryRules,
+        scholarships || [],
+        { documentReadiness }
+      );
       const uploadedDocs = new Set((documents || []).filter((doc) => doc.status !== 'rejected').map((doc) => doc.document_type));
-      const missingDocuments = requiredDocuments.filter((docType) => !uploadedDocs.has(docType));
+      const missingDocuments = documentReadiness.missing_documents;
       const applicationBlocked =
         profileState.profile_status !== 'complete' ||
         !programEvaluation.eligible_for_application ||
-        missingDocuments.length > 0 ||
+        documentReadiness.score < 100 ||
         programEvaluation.deadline_snapshot?.expired;
 
       if (applicationBlocked && !(isAdmin && admin_override)) {
@@ -207,10 +220,19 @@ export async function onRequest(context) {
         preferredCountry: program.universities?.country,
         preferredSubject: profileState.preferred_subject
       });
-      const lead = computeLeadScore(profileState);
-      const visaRisk = computeVisaRisk(profileState, countryRules);
       const selectedIntake = resolveSelectedIntake(program, intake) || programEvaluation.selected_intake || null;
       const deadlineSnapshot = buildDeadlineSnapshot(program, selectedIntake);
+      const visaRisk = computeVisaRisk(profileState, countryRules, {
+        countryName: program.universities?.country,
+        documentReadiness,
+        deadlineSnapshot
+      });
+      const profileStrengthScore = computeProfileStrength({
+        leadScore: lead.score,
+        visaRiskScore: visaRisk.score,
+        documentReadinessScore: documentReadiness.score,
+        matchScore: programEvaluation.match_score
+      });
       let timeline = upsertTimelineEvent([], {
         stage: 'created',
         label: 'Created',
@@ -253,13 +275,17 @@ export async function onRequest(context) {
               hard_failures: programEvaluation.hard_failures,
               recommendation_flags: programEvaluation.recommendation_flags
             },
-            missing_documents: missingDocuments
+            missing_documents: missingDocuments,
+            document_readiness: documentReadiness,
+            profile_strength_score: profileStrengthScore,
+            acceptance_probability: programEvaluation.acceptance_probability
           },
           risk_snapshot: {
             visa_risk_score: visaRisk.score,
             visa_risk_level: visaRisk.level,
             visa_risk_reasons: visaRisk.reasons,
-            financial_risk: programEvaluation.financial_risk
+            financial_risk: programEvaluation.financial_risk,
+            visa_timeline: visaRisk.timeline
           },
           timeline,
           deadline_snapshot: deadlineSnapshot,
@@ -293,9 +319,11 @@ export async function onRequest(context) {
           counselor_id: counselorAssignment?.counselor?.user_id || null,
           profile_status: profileState.profile_status,
           match_score: programEvaluation.match_score,
+          acceptance_probability: programEvaluation.acceptance_probability,
           lead_score: lead.score,
           visa_risk_level: visaRisk.level,
-          missing_documents: missingDocuments
+          missing_documents: missingDocuments,
+          profile_strength_score: profileStrengthScore
         }
       });
 
@@ -323,15 +351,22 @@ export async function onRequest(context) {
 
       const { data: studentProfile } = await supabase.from('profiles').select('*').eq('user_id', currentApplication.user_id).maybeSingle();
       const profileState = computeProfileState(studentProfile || {});
-      const visaRisk = computeVisaRisk(profileState, deriveCountryRules(currentApplication.programs?.universities?.country));
       const deadlineSnapshot = buildDeadlineSnapshot(
         currentApplication.programs || {},
         resolveSelectedIntake(currentApplication.programs, currentApplication.intake)
       );
-      const { data: docs } = await supabase.from('documents').select('document_type, status').eq('user_id', currentApplication.user_id);
-      const requiredDocuments = getDocumentRequirements({ ...profileState, preferred_country: currentApplication.programs?.universities?.country });
+      const { data: docs } = await supabase.from('documents').select('*').eq('user_id', currentApplication.user_id);
+      const documentReadiness = computeDocumentReadiness(
+        { ...profileState, preferred_country: currentApplication.programs?.universities?.country },
+        docs || []
+      );
       const uploadedDocs = new Set((docs || []).filter((doc) => doc.status !== 'rejected').map((doc) => doc.document_type));
-      const missingDocuments = requiredDocuments.filter((docType) => !uploadedDocs.has(docType));
+      const missingDocuments = documentReadiness.missing_documents;
+      const visaRisk = computeVisaRisk(profileState, deriveCountryRules(currentApplication.programs?.universities?.country), {
+        countryName: currentApplication.programs?.universities?.country,
+        documentReadiness,
+        deadlineSnapshot
+      });
 
       let timeline = currentApplication.timeline || [];
       if (uploadedDocs.size > 0) {
@@ -391,7 +426,9 @@ export async function onRequest(context) {
           ...(currentApplication.risk_snapshot || {}),
           visa_risk_score: visaRisk.score,
           visa_risk_level: visaRisk.level,
-          visa_risk_reasons: visaRisk.reasons
+          visa_risk_reasons: visaRisk.reasons,
+          visa_timeline: visaRisk.timeline,
+          document_readiness: documentReadiness
         }
       };
 

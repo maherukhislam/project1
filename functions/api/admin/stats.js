@@ -1,4 +1,5 @@
 import { getSupabase } from '../_supabase.js';
+import { computeDocumentReadiness, computeProfileState, detectDropOffStage } from '../_matching.js';
 
 function percentage(numerator, denominator) {
   if (!denominator) return 0;
@@ -47,13 +48,14 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers });
     }
 
-    const [students, universities, programs, scholarships, applications, counselors] = await Promise.all([
-      supabase.from('profiles').select('id, preferred_country, lead_temperature, lead_score', { count: 'exact' }).eq('role', 'student'),
+    const [students, universities, programs, scholarships, applications, counselors, documents] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'student'),
       supabase.from('universities').select('id', { count: 'exact' }),
       supabase.from('programs').select('id, is_active, application_deadline, intakes'),
       supabase.from('scholarships').select('id', { count: 'exact' }),
-      supabase.from('applications').select('id, status, counselor_id, programs(universities(country, name))'),
-      supabase.from('profiles').select('user_id, name').eq('role', 'counselor')
+      supabase.from('applications').select('id, user_id, status, counselor_id, programs(universities(country, name))'),
+      supabase.from('profiles').select('user_id, name').eq('role', 'counselor'),
+      supabase.from('documents').select('user_id, document_type, status, quality_flag, quality_flags')
     ]);
 
     const appsByStatus = {};
@@ -98,6 +100,31 @@ export async function onRequest(context) {
 
     const hotLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Hot Lead').length;
     const warmLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Warm Lead').length;
+    const applicationsByUser = new Map();
+    (applications.data || []).forEach((application) => {
+      const items = applicationsByUser.get(application.user_id) || [];
+      items.push(application);
+      applicationsByUser.set(application.user_id, items);
+    });
+
+    const documentsByUser = new Map();
+    (documents.data || []).forEach((document) => {
+      const items = documentsByUser.get(document.user_id) || [];
+      items.push(document);
+      documentsByUser.set(document.user_id, items);
+    });
+
+    const dropOffCounts = {};
+    (students.data || []).forEach((student) => {
+      const profileState = computeProfileState(student);
+      const documentReadiness = computeDocumentReadiness(profileState, documentsByUser.get(student.user_id) || []);
+      const stage = detectDropOffStage({
+        profileState,
+        applicationCount: (applicationsByUser.get(student.user_id) || []).length,
+        documentReadiness
+      });
+      dropOffCounts[stage] = (dropOffCounts[stage] || 0) + 1;
+    });
 
     return new Response(
       JSON.stringify({
@@ -117,6 +144,7 @@ export async function onRequest(context) {
         topCountries: Object.entries(byCountry).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
         topUniversities: Object.entries(byUniversity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })),
         counselorPerformance: counselorStats.sort((a, b) => b.application_count - a.application_count),
+        dropOffStages: dropOffCounts,
         deadlineAlerts: {
           expiringPrograms,
           activePrograms

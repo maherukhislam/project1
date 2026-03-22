@@ -60,6 +60,44 @@ const DEFAULT_COUNTRY_RULES = {
   Singapore: { min_gpa_required: 3.0, gpa_tolerance: 0.1, english_test_required: true, english_medium_waiver_allowed: true, max_gap_years: 5, gap_risk_threshold: 3, budget_tolerance_pct: 0.1 }
 };
 
+const COUNTRY_VISA_PROFILES = {
+  'United States': {
+    processing_days: 45,
+    living_cost_estimate: 14000,
+    interview_weight: 18,
+    financial_weight: 12,
+    emphasis: 'Interview-heavy'
+  },
+  'United Kingdom': {
+    processing_days: 21,
+    living_cost_estimate: 12000,
+    interview_weight: 8,
+    financial_weight: 18,
+    emphasis: 'Financial review'
+  },
+  Canada: {
+    processing_days: 56,
+    living_cost_estimate: 12000,
+    interview_weight: 6,
+    financial_weight: 16,
+    emphasis: 'SDS / Non-SDS sensitivity'
+  },
+  Australia: {
+    processing_days: 35,
+    living_cost_estimate: 13000,
+    interview_weight: 6,
+    financial_weight: 16,
+    emphasis: 'Financial capacity review'
+  },
+  Germany: {
+    processing_days: 42,
+    living_cost_estimate: 11000,
+    interview_weight: 4,
+    financial_weight: 18,
+    emphasis: 'Blocked-account affordability'
+  }
+};
+
 const DOCUMENT_BASE = ['passport', 'academic_certificate', 'transcript', 'cv'];
 const DOCUMENT_BY_LEVEL = { Bachelor: ['sop'], Master: ['sop', 'recommendation'], PhD: ['sop', 'recommendation', 'research_proposal'] };
 const DOCUMENT_BY_COUNTRY = { Canada: ['financial_statement'], Australia: ['financial_statement'], Germany: ['aps_certificate'], 'United States': ['financial_statement'], 'United Kingdom': ['financial_statement'] };
@@ -231,6 +269,66 @@ export function getDocumentRequirements(profile = {}) {
   if (englishTestNeeded) requirements.add('english_test');
 
   return [...requirements];
+}
+
+export function getCountryVisaProfile(countryName) {
+  return COUNTRY_VISA_PROFILES[countryName] || {
+    processing_days: 35,
+    living_cost_estimate: 10000,
+    interview_weight: 8,
+    financial_weight: 12,
+    emphasis: 'Standard visa review'
+  };
+}
+
+export function computeDocumentReadiness(profile = {}, documents = []) {
+  const state =
+    profile.profile_completion !== undefined && Array.isArray(profile.document_requirements)
+      ? profile
+      : computeProfileState(profile);
+  const requiredDocuments = state.document_requirements || getDocumentRequirements(state);
+  const usableDocuments = (documents || []).filter((doc) => doc?.status !== 'rejected');
+  const uploadedTypes = new Set(usableDocuments.map((doc) => doc?.document_type).filter(Boolean));
+  const pendingCount = usableDocuments.filter((doc) => doc?.status === 'pending').length;
+  const rejectedCount = (documents || []).filter((doc) => doc?.status === 'rejected').length;
+  const verifiedCount = usableDocuments.filter((doc) => doc?.status === 'verified').length;
+  const uploadedRequiredDocuments = requiredDocuments.filter((docType) => uploadedTypes.has(docType));
+  const missingDocuments = requiredDocuments.filter((docType) => !uploadedTypes.has(docType));
+  const completeness = requiredDocuments.length
+    ? Math.round((uploadedRequiredDocuments.length / requiredDocuments.length) * 100)
+    : 100;
+  const quality_flags = [];
+
+  if (missingDocuments.includes('sop')) quality_flags.push('Missing SOP');
+  if (missingDocuments.includes('cv')) quality_flags.push('Missing CV');
+  if (rejectedCount > 0) quality_flags.push('One or more documents were rejected');
+  if (pendingCount > uploadedRequiredDocuments.length / 2 && uploadedRequiredDocuments.length > 0) {
+    quality_flags.push('Many required documents are still pending review');
+  }
+
+  usableDocuments.forEach((doc) => {
+    const manualFlags = normalizeScalarList(doc?.quality_flags || doc?.quality_flag || doc?.admin_flag);
+    manualFlags.forEach((flag) => quality_flags.push(flag));
+  });
+
+  let score = completeness;
+  score -= Math.min(rejectedCount * 12, 24);
+  score -= Math.min(pendingCount * 4, 12);
+  if (verifiedCount >= requiredDocuments.length && requiredDocuments.length > 0) score += 5;
+  score = Math.max(0, Math.min(100, score));
+
+  return {
+    score,
+    readiness_level: score >= 85 ? 'ready' : score >= 60 ? 'in_progress' : 'weak',
+    required_documents: requiredDocuments,
+    uploaded_required_documents: uploadedRequiredDocuments,
+    missing_documents: missingDocuments,
+    completeness,
+    verified_count: verifiedCount,
+    pending_count: pendingCount,
+    rejected_count: rejectedCount,
+    quality_flags: [...new Set(quality_flags)]
+  };
 }
 
 export function validateProfileInput(profile = {}) {
@@ -414,12 +512,69 @@ export function computeLeadScore(profile = {}, applicationCount = 0) {
   };
 }
 
-export function computeVisaRisk(profile = {}, countryRules = null) {
+export function computeProfileStrength({ leadScore = 0, visaRiskScore = 0, documentReadinessScore = null, matchScore = null }) {
+  let score = leadScore * 0.45 + (100 - visaRiskScore) * 0.3;
+  if (documentReadinessScore !== null && documentReadinessScore !== undefined) score += documentReadinessScore * 0.15;
+  if (matchScore !== null && matchScore !== undefined) score += matchScore * 0.1;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+export function detectDropOffStage({ profileState, applicationCount = 0, documentReadiness = null }) {
+  if ((profileState?.profile_completion || 0) < 60 && applicationCount === 0) return 'signed_up_no_profile';
+  if ((profileState?.profile_completion || 0) >= 80 && applicationCount === 0) return 'profile_ready_no_application';
+  if (applicationCount > 0 && documentReadiness && documentReadiness.score < 100) return 'applied_missing_documents';
+  if ((profileState?.profile_completion || 0) >= 60 && applicationCount === 0) return 'profile_in_progress';
+  return 'active';
+}
+
+export function computeVisaTimelineRisk(countryName, deadlineSnapshot = {}) {
+  const countryProfile = getCountryVisaProfile(countryName);
+  const startDaysLeft = deadlineSnapshot?.start_days_left;
+  const bufferDays =
+    startDaysLeft === null || startDaysLeft === undefined
+      ? null
+      : startDaysLeft - countryProfile.processing_days;
+
+  let level = 'Unknown';
+  let late_application = false;
+  let reason = 'Start date unavailable for visa timeline estimate.';
+
+  if (bufferDays !== null) {
+    if (bufferDays < 0) {
+      level = 'High';
+      late_application = true;
+      reason = `Estimated visa processing (${countryProfile.processing_days} days) is longer than time left before intake.`;
+    } else if (bufferDays <= 14) {
+      level = 'Medium';
+      reason = `Visa timing is tight with only ${bufferDays} days of buffer.`;
+    } else {
+      level = 'Low';
+      reason = `Visa timing buffer is healthy at ${bufferDays} days.`;
+    }
+  }
+
+  return {
+    level,
+    late_application,
+    processing_days: countryProfile.processing_days,
+    living_cost_estimate: countryProfile.living_cost_estimate,
+    emphasis: countryProfile.emphasis,
+    start_days_left: startDaysLeft ?? null,
+    buffer_days: bufferDays,
+    reason
+  };
+}
+
+export function computeVisaRisk(profile = {}, countryRules = null, options = {}) {
   const state =
     profile.profile_completion !== undefined && profile.normalized_gpa !== undefined
       ? profile
       : computeProfileState(profile);
-  const rules = countryRules || deriveCountryRules(state.preferred_country);
+  const countryName = options.countryName || state.preferred_country;
+  const rules = countryRules || deriveCountryRules(countryName);
+  const countryProfile = getCountryVisaProfile(countryName);
+  const documentReadiness = options.documentReadiness || state.document_readiness || null;
+  const visaTimeline = computeVisaTimelineRisk(countryName, options.deadlineSnapshot || {});
   let riskPoints = 0;
   const reasons = [];
 
@@ -457,9 +612,54 @@ export function computeVisaRisk(profile = {}, countryRules = null) {
     reasons.push('Profile is incomplete and documents may be weak.');
   }
 
+  if (documentReadiness) {
+    if (documentReadiness.score < 60) {
+      riskPoints += 18;
+      reasons.push('Document readiness is weak for visa confidence.');
+    } else if (documentReadiness.score < 85) {
+      riskPoints += 8;
+      reasons.push('Document readiness is still incomplete.');
+    }
+  }
+
+  if (countryName === 'United States') {
+    riskPoints += countryProfile.interview_weight * ((state.normalized_english ?? 0) < 6 ? 0.6 : 0.25);
+    reasons.push('USA cases are interview-heavy and require strong interview readiness.');
+  } else if (countryName === 'United Kingdom') {
+    if ((state.budget_realism?.category || 'unknown') !== 'strong') {
+      riskPoints += countryProfile.financial_weight * 0.6;
+      reasons.push('UK visa review is sensitive to financial evidence.');
+    }
+  } else if (countryName === 'Canada') {
+    const sdsReady = (state.normalized_english ?? 0) >= 6 && (state.budget_realism?.category || 'unknown') !== 'risky';
+    if (!sdsReady) {
+      riskPoints += 14;
+      reasons.push('Canada profile looks closer to Non-SDS and may face slower processing.');
+    }
+  }
+
+  if (visaTimeline.late_application) {
+    riskPoints += 22;
+    reasons.push('Visa timeline is too tight for the selected intake.');
+  } else if (visaTimeline.level === 'Medium') {
+    riskPoints += 10;
+    reasons.push('Visa timeline buffer is narrow.');
+  }
+
   const score = Math.max(0, Math.min(100, riskPoints));
   const level = score <= 25 ? 'Low risk' : score <= 55 ? 'Medium risk' : 'High risk';
-  return { score, level, reasons };
+  return {
+    score,
+    level,
+    reasons,
+    country_profile: {
+      country: countryName || null,
+      processing_days: countryProfile.processing_days,
+      emphasis: countryProfile.emphasis,
+      living_cost_estimate: countryProfile.living_cost_estimate
+    },
+    timeline: visaTimeline
+  };
 }
 
 export function detectDuplicateSignals({ profile = {}, existingProfiles = [], recentProfiles = [] }) {
@@ -569,44 +769,75 @@ function intakeMatchDetails(preferredIntakeName, preferredIntakeYear, program) {
   const availableIntakes = programIntakes.filter(isIntakeAvailable);
   const candidateIntakes = availableIntakes.length ? availableIntakes : programIntakes;
   const nearest = candidateIntakes[0] || null;
+  const priorityDetails = (selected) => {
+    const selectedIndex = candidateIntakes.findIndex((item) => item?.key === selected?.key);
+    const deadlineDays = daysUntil(selected?.application_deadline);
+    const priority = selectedIndex <= 0 ? 'current' : selectedIndex === 1 ? 'next' : 'future';
+    const priority_score = selectedIndex <= 0 ? 6 : selectedIndex === 1 ? 4 : 2;
+    const urgency_score =
+      deadlineDays === null ? 1 : deadlineDays <= 14 ? 5 : deadlineDays <= 30 ? 4 : deadlineDays <= 60 ? 2 : 0;
+
+    return {
+      priority,
+      priority_score,
+      urgency_score,
+      deadline_days_left: deadlineDays
+    };
+  };
 
   if (!preferredIntakeName) {
+    const details = priorityDetails(nearest);
     return {
       matched: true,
       nearest: nearest?.label || null,
       selected: nearest,
-      weight: nearest ? 3 : 1,
+      weight: nearest ? 3 + details.priority_score + details.urgency_score : 1,
+      priority: details.priority,
+      urgency_score: details.urgency_score,
+      deadline_days_left: details.deadline_days_left,
       reason: nearest ? 'Flexible intake preference' : 'No intake data available'
     };
   }
 
   const exact = candidateIntakes.find((item) => item.name === preferredIntakeName && (preferredIntakeYear === null || item.year === preferredIntakeYear));
   if (exact) {
+    const details = priorityDetails(exact);
     return {
       matched: true,
       nearest: exact.label,
       selected: exact,
-      weight: 5,
+      weight: 5 + details.priority_score + details.urgency_score,
+      priority: details.priority,
+      urgency_score: details.urgency_score,
+      deadline_days_left: details.deadline_days_left,
       reason: exact.status === 'Upcoming' ? 'Preferred intake is upcoming' : 'Preferred intake available'
     };
   }
 
   const sameSeason = candidateIntakes.find((item) => item.name === preferredIntakeName);
   if (sameSeason) {
+    const details = priorityDetails(sameSeason);
     return {
       matched: false,
       nearest: sameSeason.label,
       selected: sameSeason,
-      weight: 3,
+      weight: 3 + details.priority_score + details.urgency_score,
+      priority: details.priority,
+      urgency_score: details.urgency_score,
+      deadline_days_left: details.deadline_days_left,
       reason: `Nearest intake is ${sameSeason.label}`
     };
   }
 
+  const details = priorityDetails(nearest);
   return {
     matched: false,
     nearest: nearest?.label || null,
     selected: nearest,
-    weight: nearest ? 1 : 0,
+    weight: nearest ? 1 + details.priority_score + details.urgency_score : 0,
+    priority: details.priority,
+    urgency_score: details.urgency_score,
+    deadline_days_left: details.deadline_days_left,
     reason: nearest ? `Nearest intake is ${nearest.label}` : 'No intake data available'
   };
 }
@@ -657,13 +888,16 @@ function englishMatchDetails(profile, program, countryRules) {
 function budgetMatchDetails(profile, program, countryRules, hasScholarship) {
   const budgetMax = readNumber(profile.budget_max);
   const tuitionFee = readNumber(program.tuition_fee);
-  if (budgetMax === null || tuitionFee === null) return { category: 'unknown', score: 6, reason: 'Budget comparison unavailable' };
+  const countryVisaProfile = getCountryVisaProfile(program.universities?.country || program.country || profile.preferred_country);
+  const livingCost = readNumber(program.estimated_living_cost) ?? countryVisaProfile.living_cost_estimate;
+  const totalCost = tuitionFee !== null ? tuitionFee + livingCost : null;
+  if (budgetMax === null || totalCost === null) return { category: 'unknown', score: 6, reason: 'Budget comparison unavailable', total_cost: totalCost };
 
   const toleranceBudget = budgetMax * (1 + countryRules.budget_tolerance_pct);
-  if (tuitionFee <= budgetMax) return { category: 'within', score: 15, reason: 'Within budget' };
-  if (tuitionFee <= toleranceBudget) return { category: 'slightly_above', score: 8, reason: 'Slightly above budget' };
-  if (hasScholarship) return { category: 'aid_needed', score: 4, reason: 'Requires financial aid' };
-  return { category: 'over', score: 0, reason: 'Over budget' };
+  if (totalCost <= budgetMax) return { category: 'affordable', score: 18, reason: 'Tuition and living cost fit the budget', total_cost: totalCost };
+  if (totalCost <= toleranceBudget) return { category: 'stretch', score: 9, reason: 'Total cost is slightly above budget', total_cost: totalCost };
+  if (hasScholarship) return { category: 'aid_needed', score: 5, reason: 'Requires scholarship support to become viable', total_cost: totalCost };
+  return { category: 'risky', score: 0, reason: 'Total cost is over budget', total_cost: totalCost };
 }
 
 function countryPreferenceScore(profile, programCountry) {
@@ -778,7 +1012,7 @@ export async function suggestAlternatives(supabase, profileState, rejectedProgra
 
   return (programs || [])
     .map((program) => evaluateProgram(profileState, program, deriveCountryRules(program.universities?.country || profileState.preferred_country), []))
-    .filter((program) => ['within', 'slightly_above', 'aid_needed', 'unknown'].includes(program.budget_category))
+    .filter((program) => ['affordable', 'stretch', 'aid_needed', 'unknown'].includes(program.budget_category))
     .filter((program) => program.subject_match !== 'none')
     .sort((a, b) => b.match_score - a.match_score)
     .slice(0, limit)
@@ -823,7 +1057,78 @@ export async function assignCounselor(supabase, { preferredCountry, preferredSub
   return scored.sort((a, b) => b.score - a.score || a.workload - b.workload)[0] || null;
 }
 
-export function evaluateProgram(profileState, program, countryRules, scholarships = []) {
+function computeAcceptanceProbability({
+  gpa,
+  english,
+  budget,
+  subject,
+  intake,
+  scholarshipMatches,
+  hardFailures,
+  documentReadiness,
+  visaTimeline,
+  program
+}) {
+  let percent = 42;
+
+  percent += { above: 18, meets: 12, tolerance: 4, missing: -18, below: -28 }[gpa.category] || 0;
+  percent += { waived: 10, meets: 12, tolerance: 4, missing: -15, below: -22 }[english.category] || 0;
+  percent += { affordable: 10, stretch: 4, aid_needed: 0, risky: -12, unknown: 0 }[budget.category] || 0;
+  percent += { exact: 8, related: 4, flexible: 2, none: -10 }[subject.tier] || 0;
+  percent += intake.matched ? 6 : 1;
+  percent += Math.min(intake.urgency_score || 0, 4);
+  percent += Math.min((scholarshipMatches || []).length * 2, 6);
+
+  if (documentReadiness) {
+    if (documentReadiness.score >= 85) percent += 8;
+    else if (documentReadiness.score < 60) percent -= 12;
+  }
+
+  if (visaTimeline?.late_application) percent -= 16;
+  if (visaTimeline?.level === 'Medium') percent -= 6;
+
+  const historicalSuccessRate =
+    readNumber(program.offer_success_rate) ??
+    readNumber(program.acceptance_rate) ??
+    readNumber(program.universities?.acceptance_rate);
+  if (historicalSuccessRate !== null) {
+    percent = Math.round(percent * 0.7 + historicalSuccessRate * 0.3);
+  }
+
+  percent -= Math.min((hardFailures || []).length * 8, 24);
+  percent = Math.max(5, Math.min(95, Math.round(percent)));
+
+  return {
+    percent,
+    band: percent >= 75 ? 'High' : percent >= 55 ? 'Medium' : 'Low'
+  };
+}
+
+function buildApplicationStrategy(matches = []) {
+  const safePool = matches.filter((item) => item.match_score >= 75);
+  const moderatePool = matches.filter((item) => item.match_score >= 60 && item.match_score < 75);
+  const ambitiousPool = matches.filter((item) => item.match_score < 60);
+  const fallbackSorted = [...matches].sort((a, b) => b.match_score - a.match_score);
+
+  const safe = safePool.slice(0, 2);
+  const moderate = moderatePool.slice(0, 2);
+  const ambitious = ambitiousPool.slice(0, 1);
+
+  const used = new Set([...safe, ...moderate, ...ambitious].map((item) => item.id));
+  const fallback = fallbackSorted.filter((item) => !used.has(item.id));
+
+  while (safe.length < 2 && fallback.length) safe.push(fallback.shift());
+  while (moderate.length < 2 && fallback.length) moderate.push(fallback.shift());
+  while (ambitious.length < 1 && fallback.length) ambitious.push(fallback.pop());
+
+  return {
+    safe: safe.map((item) => item.id),
+    moderate: moderate.map((item) => item.id),
+    ambitious: ambitious.map((item) => item.id)
+  };
+}
+
+export function evaluateProgram(profileState, program, countryRules, scholarships = [], options = {}) {
   const programCountry = program.universities?.country || program.country;
   const subject = subjectMatchDetails(profileState.preferred_subject, program);
   const intake = intakeMatchDetails(profileState.preferred_intake_name, readNumber(profileState.preferred_intake_year), program);
@@ -835,7 +1140,12 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
   const gapYears = profileState.gap_years;
   const gapRisk = gapYears !== null && gapYears > countryRules.max_gap_years ? 'high' : gapYears !== null && gapYears > countryRules.gap_risk_threshold ? 'medium' : 'low';
   const deadlineSnapshot = buildDeadlineSnapshot(program, intake.selected);
-  const visaRisk = computeVisaRisk(profileState, countryRules);
+  const documentReadiness = options.documentReadiness || null;
+  const visaRisk = computeVisaRisk(profileState, countryRules, {
+    countryName: programCountry,
+    documentReadiness,
+    deadlineSnapshot
+  });
   const seatsTotal = readNumber(program.seats_total);
   const seatsFilled = readNumber(program.seats_filled) ?? 0;
   const nearlyFull = seatsTotal !== null && seatsTotal > 0 && seatsFilled / seatsTotal >= 0.85;
@@ -846,15 +1156,43 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
   if (!gpa.eligible) hardFailures.push(gpa.reason);
   if (!english.eligible) hardFailures.push(english.reason);
   if (deadlineSnapshot.expired) hardFailures.push('Program deadline expired');
+  if (documentReadiness?.missing_documents?.length) hardFailures.push(`Missing required documents: ${documentReadiness.missing_documents.join(', ')}`);
+  if (visaRisk.timeline?.late_application) hardFailures.push('Visa timeline is too tight for the selected intake');
 
   const score = Math.max(
     0,
     Math.min(
       100,
-      gpa.score + english.score + budget.score + subject.score + country.score + intake.weight + (scholarshipMatches.length ? 5 : 0) - (nearlyFull ? 8 : 0)
+      gpa.score +
+        english.score +
+        budget.score +
+        subject.score +
+        country.score +
+        intake.weight +
+        (scholarshipMatches.length ? Math.min(5 + scholarshipMatches.length * 2, 10) : 0) -
+        (nearlyFull ? 8 : 0) -
+        (visaRisk.timeline?.late_application ? 10 : 0)
     )
   );
   const conditional_match = gpa.category === 'tolerance' || english.category === 'tolerance';
+  const acceptanceProbability = computeAcceptanceProbability({
+    gpa,
+    english,
+    budget,
+    subject,
+    intake,
+    scholarshipMatches,
+    hardFailures,
+    documentReadiness,
+    visaTimeline: visaRisk.timeline,
+    program
+  });
+  const profileStrengthScore = computeProfileStrength({
+    leadScore: profileState.lead_score || 0,
+    visaRiskScore: visaRisk.score,
+    documentReadinessScore: documentReadiness?.score ?? null,
+    matchScore: score
+  });
 
   return {
     ...program,
@@ -863,18 +1201,31 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
     hard_failures: hardFailures,
     gap_risk: gapRisk,
     budget_category: budget.category,
+    financial_fit: budget.category,
+    financial_estimate: {
+      total_cost: budget.total_cost || null,
+      student_budget_max: readNumber(profileState.budget_max),
+      living_cost_estimate: getCountryVisaProfile(programCountry).living_cost_estimate
+    },
     gpa_category: gpa.category,
     english_category: english.category,
     subject_match: subject.tier,
     intake_match: intake.matched,
     nearest_intake: intake.nearest,
     selected_intake: intake.selected,
+    intake_priority: intake.priority,
+    intake_urgency_score: intake.urgency_score,
     deadline_snapshot: deadlineSnapshot,
-    financial_risk: budget.category === 'over' ? 'high' : budget.category === 'aid_needed' ? 'medium' : 'low',
+    financial_risk: budget.category === 'risky' ? 'high' : budget.category === 'aid_needed' ? 'medium' : 'low',
     visa_risk_level: visaRisk.level,
+    visa_risk_score: visaRisk.score,
+    visa_timeline: visaRisk.timeline,
     conditional_match,
     match_score: score,
     match_category: score >= 80 ? 'High match' : score >= 60 ? 'Medium match' : 'Low match',
+    acceptance_probability: acceptanceProbability,
+    document_readiness: documentReadiness,
+    profile_strength_score: profileStrengthScore,
     match_reasons: [
       gpa.reason,
       english.reason,
@@ -883,16 +1234,19 @@ export function evaluateProgram(profileState, program, countryRules, scholarship
       country.reason,
       intake.reason,
       scholarshipMatches.length ? 'Scholarship available' : null,
-      nearlyFull ? 'Intake nearly full' : null
+      nearlyFull ? 'Intake nearly full' : null,
+      visaRisk.timeline?.reason || null
     ].filter(Boolean),
     eligible_for_application: hardFailures.length === 0,
     recommendation_flags: [
       !gpa.eligible ? 'Improve GPA or target lower-threshold programs.' : null,
       !english.eligible ? 'Improve English score or target programs with waivers.' : null,
-      budget.category === 'over' ? 'Increase budget or prioritize funded options.' : null,
+      budget.category === 'risky' ? 'Increase budget or prioritize funded options.' : null,
       subject.tier === 'none' ? 'Widen subject preference for more results.' : null,
       gapRisk === 'high' ? 'Long study gap may require explanation or override.' : null,
-      conditional_match ? 'Conditional match: slight requirement relaxation applied.' : null
+      conditional_match ? 'Conditional match: slight requirement relaxation applied.' : null,
+      documentReadiness?.missing_documents?.length ? `Upload required documents: ${documentReadiness.missing_documents.join(', ')}` : null,
+      visaRisk.timeline?.late_application ? 'Visa timeline is tight for this intake.' : null
     ].filter(Boolean)
   };
 }
@@ -905,6 +1259,11 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
   const profileState = computeProfileState(profile);
   const lead = computeLeadScore(profileState);
   const visaRisk = computeVisaRisk(profileState);
+  const profileWithSignals = {
+    ...profileState,
+    lead_score: lead.score,
+    lead_temperature: lead.temperature
+  };
   const countryByName = new Map((countries || []).map((country) => [country.name, country]));
 
   const evaluated = programs
@@ -912,14 +1271,14 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
     .map((program) => {
       const programCountry = program.universities?.country || program.country;
       const countryRules = deriveCountryRules(programCountry, countryByName.get(programCountry));
-      return evaluateProgram(profileState, program, countryRules, scholarships);
+      return evaluateProgram(profileWithSignals, program, countryRules, scholarships);
     })
     .filter((program) => program.degree_level === profileState.study_level);
 
   const subjectFiltered = stageMatches(evaluated, (program) => program.subject_match !== 'none');
   const countryFiltered = stageMatches(subjectFiltered, (program) => !profileState.preferred_country || (program.universities?.country || program.country) === profileState.preferred_country);
   const intakeFiltered = stageMatches(countryFiltered, (program) => program.intake_match);
-  const budgetFiltered = stageMatches(countryFiltered, (program) => ['within', 'slightly_above', 'aid_needed', 'unknown'].includes(program.budget_category));
+  const budgetFiltered = stageMatches(countryFiltered, (program) => ['affordable', 'stretch', 'aid_needed', 'unknown'].includes(program.budget_category));
   const eligibleOnly = (items) => items.filter((program) => program.eligible_for_application || program.hard_failures.length === 0);
 
   let relaxed_stage = 'none';
@@ -929,7 +1288,7 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
     relaxed_stage = 'intake';
   }
   if (!finalMatches.length) {
-    finalMatches = eligibleOnly(subjectFiltered.filter((program) => ['within', 'slightly_above', 'aid_needed', 'unknown'].includes(program.budget_category)));
+    finalMatches = eligibleOnly(subjectFiltered.filter((program) => ['affordable', 'stretch', 'aid_needed', 'unknown'].includes(program.budget_category)));
     relaxed_stage = 'budget';
   }
   if (!finalMatches.length) {
@@ -945,18 +1304,18 @@ export function computeMatchResults({ profile, programs, countries = [], scholar
       lead_score: lead.score,
       lead_temperature: lead.temperature,
       visa_risk_score: visaRisk.score,
-      visa_risk_level: visaRisk.level
+      visa_risk_level: visaRisk.level,
+      profile_strength_score: computeProfileStrength({
+        leadScore: lead.score,
+        visaRiskScore: visaRisk.score
+      })
     },
     matches: finalMatches,
     meta: {
       relaxed_stage,
       alternatives_returned: finalMatches.length > 0,
       suggestions: profileState.improvement_flags,
-      application_strategy: {
-        safe: finalMatches.filter((item) => item.match_score >= 75).slice(0, 3).map((item) => item.id),
-        moderate: finalMatches.filter((item) => item.match_score >= 60 && item.match_score < 75).slice(0, 3).map((item) => item.id),
-        ambitious: finalMatches.filter((item) => item.match_score < 60).slice(0, 3).map((item) => item.id)
-      }
+      application_strategy: buildApplicationStrategy(finalMatches)
     }
   };
 }
