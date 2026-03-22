@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Trash2, CheckCircle, Clock, AlertCircle, File, Image, FileSpreadsheet } from 'lucide-react';
+import { Upload, Trash2, CheckCircle, Clock, AlertCircle, File, Image, FileSpreadsheet, ExternalLink } from 'lucide-react';
 import GlassCard from '../../components/GlassCard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
@@ -97,9 +97,14 @@ const Documents: React.FC = () => {
 
   const getFileIcon = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return Image;
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return Image;
     if (['xls', 'xlsx', 'csv'].includes(ext || '')) return FileSpreadsheet;
     return File;
+  };
+
+  const isImageFile = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
   };
 
   const formatFileSize = (bytes: number) => {
@@ -179,20 +184,46 @@ const Documents: React.FC = () => {
                     {uploaded.map(doc => {
                       const FileIcon = getFileIcon(doc.file_name);
                       return (
-                        <div key={doc.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/50 border border-slate-100">
-                          <FileIcon className="w-8 h-8 text-slate-400" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">{doc.file_name}</p>
-                            <p className="text-xs text-slate-500">{formatFileSize(doc.file_size || 0)}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(doc.status)}
-                            <button
-                              onClick={() => handleDelete(doc.id)}
-                              className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                        <div key={doc.id} className="rounded-xl bg-white/50 border border-slate-100 overflow-hidden">
+                          {/* Image preview — rendered directly from R2 URL, no server involved */}
+                          {isImageFile(doc.file_name) && doc.file_url && (
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                              <img
+                                src={doc.file_url}
+                                alt={doc.file_name}
+                                loading="lazy"
+                                className="w-full h-32 object-cover border-b border-slate-100"
+                              />
+                            </a>
+                          )}
+                          <div className="flex items-center gap-3 p-3">
+                            <FileIcon className="w-8 h-8 shrink-0 text-slate-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">{doc.file_name}</p>
+                              <p className="text-xs text-slate-500">{formatFileSize(doc.file_size || 0)}</p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {getStatusIcon(doc.status)}
+                              {/* Direct link to R2 — browser fetches from CDN, not the app server */}
+                              {doc.file_url && (
+                                <a
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1 text-slate-400 hover:text-sky-500 transition-colors"
+                                  title="Open file"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => handleDelete(doc.id)}
+                                className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );

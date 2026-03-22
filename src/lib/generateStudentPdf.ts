@@ -17,8 +17,9 @@ import {
   PDFPage,
   rgb,
   StandardFonts,
+  PDFFont,
+  type RGB,
 } from 'pdf-lib';
-import type { RGB, PDFFont } from 'pdf-lib';
 
 // ── Brand colours ─────────────────────────────────────────────────────────────
 const TEAL      = rgb(0.078, 0.718, 0.647);   // #14b7a5
@@ -133,27 +134,18 @@ function labelStatus(status: string): string {
 async function fetchFileBytes(url: string, token: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   if (!url || url.startsWith('data:')) return null;
 
+  // Try proxy (works in production on Cloudflare Pages)
   try {
-    // Try proxy (works in production on Cloudflare Pages)
     const proxyRes = await fetch(
       `/api/admin/file-proxy?url=${encodeURIComponent(url)}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
     if (proxyRes.ok) {
       const ct = proxyRes.headers.get('content-type') ?? 'application/octet-stream';
       return { bytes: new Uint8Array(await proxyRes.arrayBuffer()), contentType: ct };
     }
-
-    // If proxy returns a client error (4xx), it's a definitive failure (auth, file type not allowed, etc.).
-    // We should not fall back to a direct fetch, as it would bypass security checks.
-    if (proxyRes.status >= 400 && proxyRes.status < 500) {
-      console.error(`[PDF Generator] Proxy for ${url} failed with status ${proxyRes.status}. Not falling back.`);
-      return null;
-    }
-    // For 5xx errors from the proxy, we'll fall through and attempt a direct fetch.
-  } catch (e) {
-    // Proxy not available (e.g. in local dev) or there was a network error. Fall through to try direct fetch.
+  } catch {
+    // proxy not available (local dev) — try direct
   }
 
   // Fallback: direct fetch (works if CORS is open on the bucket)

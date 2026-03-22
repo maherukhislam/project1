@@ -14,12 +14,14 @@ import {
   User,
   CheckCircle,
   Clock,
-  Download
+  Download,
+  ExternalLink,
+  Image
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 import supabase from '../../lib/supabase';
-import { generateStudentPdf } from '../../lib/generateStudentPdf.js';
+import { generateStudentPdf } from '../../lib/generateStudentPdf';
 
 const stageOrder = ['new_lead', 'profile_ready', 'applied', 'review', 'visa'] as const;
 
@@ -159,7 +161,7 @@ const AdminStudents: React.FC = () => {
         token,
       );
 
-      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
       const url  = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href     = url;
@@ -456,20 +458,51 @@ const AdminStudents: React.FC = () => {
 
                 {activeTab === 'documents' && (
                   <div className="space-y-3">
-                    {selectedDocs.length > 0 ? selectedDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900/50 p-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <FileText className="h-8 w-8 text-slate-400" />
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-white">{doc.file_name}</p>
-                            <p className="text-sm capitalize text-slate-400">{doc.document_type.replace('_', ' ')}</p>
+                    {selectedDocs.length > 0 ? selectedDocs.map((doc) => {
+                      const isImage = /\.(jpe?g|png|gif|webp)$/i.test(doc.file_name || '');
+                      const DocIcon = isImage ? Image : FileText;
+                      return (
+                        <div key={doc.id} className="rounded-2xl border border-slate-700 bg-slate-900/50 overflow-hidden">
+                          {/* Image thumbnail — served directly from R2 CDN URL */}
+                          {isImage && doc.file_url && (
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                              <img
+                                src={doc.file_url}
+                                alt={doc.file_name}
+                                loading="lazy"
+                                className="w-full h-36 object-cover border-b border-slate-700"
+                              />
+                            </a>
+                          )}
+                          <div className="flex items-center justify-between gap-3 p-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <DocIcon className="h-7 w-7 shrink-0 text-slate-400" />
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-white text-sm">{doc.file_name}</p>
+                                <p className="text-xs capitalize text-slate-400">{doc.document_type?.replace(/_/g, ' ')}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusColor(doc.status)}`}>
+                                {doc.status}
+                              </span>
+                              {/* Direct R2 URL — browser opens from CDN, no server roundtrip */}
+                              {doc.file_url && (
+                                <a
+                                  href={doc.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-sky-400 transition-colors"
+                                  title="Open file"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-medium capitalize ${getStatusColor(doc.status)}`}>
-                          {doc.status}
-                        </span>
-                      </div>
-                    )) : (
+                      );
+                    }) : (
                       <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-8 text-center">
                         <FileText className="mx-auto mb-3 h-12 w-12 text-slate-600" />
                         <p className="text-slate-400">No documents uploaded</p>
