@@ -5,6 +5,15 @@ const getToken = async (): Promise<string | null> => {
   return session?.access_token || null;
 };
 
+async function parseError(res: Response): Promise<string> {
+  try {
+    const json = await res.json();
+    return json?.error || `Request failed (${res.status})`;
+  } catch {
+    return `Request failed (${res.status})`;
+  }
+}
+
 export const api = {
   async get(endpoint: string, params: Record<string, string> = {}): Promise<any> {
     const token = await getToken();
@@ -13,8 +22,8 @@ export const api = {
     const res = await fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-    return res.json();
+    if (!res.ok) throw new Error(await parseError(res));
+    return res.json().catch(() => null);
   },
 
   async post(endpoint: string, data: Record<string, any>): Promise<any> {
@@ -27,7 +36,7 @@ export const api = {
       },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+    if (!res.ok) throw new Error(await parseError(res));
     return res.json();
   },
 
@@ -41,7 +50,7 @@ export const api = {
       },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+    if (!res.ok) throw new Error(await parseError(res));
     return res.json();
   },
 
@@ -55,7 +64,7 @@ export const api = {
       },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+    if (!res.ok) throw new Error(await parseError(res));
     return res.json();
   }
 };

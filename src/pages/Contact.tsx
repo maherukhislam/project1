@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, Clock, MessageSquare } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Clock, MessageSquare, CheckCircle } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import { useCms } from '../contexts/CmsContext';
 
@@ -24,8 +24,8 @@ const Contact: React.FC = () => {
   const contactInfo = [
     { icon: Mail, label: 'Email', value: cms.email, href: `mailto:${cms.email}` },
     { icon: Phone, label: 'Phone', value: cms.phone, href: `tel:${cms.phone.replace(/\D/g, '')}` },
-    { icon: MapPin, label: 'Address', value: cms.address, href: '#' },
-    { icon: Clock, label: 'Hours', value: cms.hours, href: '#' }
+    { icon: MapPin, label: 'Address', value: cms.address, href: null },
+    { icon: Clock, label: 'Hours', value: cms.hours, href: null }
   ];
 
   return (
@@ -66,17 +66,29 @@ const Contact: React.FC = () => {
               >
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">Contact Information</h2>
                 <div className="space-y-4">
-                  {contactInfo.map((item, i) => (
-                    <GlassCard key={i} className="p-4">
-                      <a href={item.href} className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shrink-0">
-                          <item.icon className="w-6 h-6 text-white" />
+                  {contactInfo.map((item) => (
+                    <GlassCard key={item.label} className="p-4">
+                      {item.href ? (
+                        <a href={item.href} className="flex items-start gap-4 group">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shrink-0">
+                            <item.icon className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-slate-900 group-hover:text-sky-600 transition-colors">{item.label}</h3>
+                            <p className="text-slate-600 text-sm">{item.value}</p>
+                          </div>
+                        </a>
+                      ) : (
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shrink-0">
+                            <item.icon className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-slate-900">{item.label}</h3>
+                            <p className="text-slate-600 text-sm">{item.value}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900">{item.label}</h3>
-                          <p className="text-slate-600 text-sm">{item.value}</p>
-                        </div>
-                      </a>
+                      )}
                     </GlassCard>
                   ))}
                 </div>
@@ -112,7 +124,7 @@ const Contact: React.FC = () => {
                 {submitted ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                      <Send className="w-8 h-8 text-green-500" />
+                      <CheckCircle className="w-8 h-8 text-green-500" />
                     </div>
                     <h3 className="text-2xl font-bold text-slate-900 mb-2">Message Sent!</h3>
                     <p className="text-slate-600">

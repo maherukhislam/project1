@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, ArrowRight, BookOpen } from 'lucide-react';
@@ -31,9 +31,10 @@ const Blog: React.FC = () => {
   const categories = ['All', 'Study Guides', 'Visa Tips', 'Scholarships', 'Student Life', 'Career'];
   const [activeCategory, setActiveCategory] = useState('All');
 
-  const filteredPosts = activeCategory === 'All' 
-    ? posts 
-    : posts.filter(p => p.category === activeCategory);
+  const filteredPosts = useMemo(
+    () => activeCategory === 'All' ? posts : posts.filter(p => p.category === activeCategory),
+    [posts, activeCategory]
+  );
 
   return (
     <div className="min-h-screen">

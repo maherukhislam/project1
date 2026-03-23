@@ -26,8 +26,8 @@ import NotificationBell from '../../components/NotificationBell';
 // ── Nav definition ─────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { path: '/admin',              icon: Home,         label: 'Dashboard',      exact: true },
-  { path: '/admin/students',     icon: Users,        label: 'Students',       notifs: 4 },
-  { path: '/admin/applications', icon: FileText,     label: 'Applications',   notifs: 7 },
+  { path: '/admin/students',     icon: Users,        label: 'Students' },
+  { path: '/admin/applications', icon: FileText,     label: 'Applications' },
   { path: '/admin/documents',    icon: Upload,       label: 'Documents' },
   { path: '/admin/universities', icon: GraduationCap,label: 'Universities' },
   { path: '/admin/programs',     icon: BookOpen,     label: 'Programs' },
@@ -132,14 +132,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
               </div>
               {!collapsed && (
                 <span className="flex-1 text-sm font-medium">{item.label}</span>
-              )}
-              {!collapsed && item.notifs && (
-                <span className="mr-3 flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-[10px] font-bold text-teal-300 ring-1 ring-teal-500/30">
-                  {item.notifs}
-                </span>
-              )}
-              {collapsed && item.notifs && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-400" />
               )}
             </Link>
           );

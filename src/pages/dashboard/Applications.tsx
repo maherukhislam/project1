@@ -117,7 +117,7 @@ const Applications: React.FC = () => {
                 : 'bg-white/80 text-slate-600 hover:bg-sky-50 hover:text-sky-600 border border-slate-200'
             }`}
           >
-            {status === 'all' ? 'All' : status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+            {status === 'all' ? 'All' : status.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
           </button>
         ))}
       </div>
@@ -171,7 +171,7 @@ const Applications: React.FC = () => {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-500">
                         <span className={`inline-flex px-3 py-1 rounded-full font-medium ${getStatusColor(app.status)}`}>
-                          {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {app.status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         </span>
                         {app.intake && <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-700">{app.intake}</span>}
                       </div>

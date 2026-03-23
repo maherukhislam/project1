@@ -60,7 +60,11 @@ const DashboardHome: React.FC = () => {
       }
     };
 
-    if (profile) fetchData();
+    if (profile) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
   }, [profile]);
 
   if (loading) {
@@ -298,7 +302,7 @@ const DashboardHome: React.FC = () => {
                         </div>
                       </div>
                       <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusTone(app.status)}`}>
-                        {app.status.replace('_', ' ')}
+                        {app.status.replace(/_/g, ' ')}
                       </span>
                     </div>
                     <div className="mt-3 text-sm text-slate-500">
