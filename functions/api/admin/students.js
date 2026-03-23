@@ -69,6 +69,31 @@ const HEADERS = {
 const isRecursiveProfilesPolicyError = (error) =>
   Boolean(error?.message?.includes('infinite recursion detected in policy for relation "profiles"'));
 
+const isMissingDocumentQualityColumnsError = (error) =>
+  error?.code === '42703'
+  && (error?.message?.includes('quality_flag') || error?.message?.includes('quality_flags'));
+
+async function fetchDocumentsWithFallback(supabase, userIdOrIds) {
+  const selectWithQuality = 'user_id, document_type, status, quality_flag, quality_flags';
+  const selectWithoutQuality = 'user_id, document_type, status';
+  const isSingleUser = typeof userIdOrIds === 'string';
+  const hasList = Array.isArray(userIdOrIds) && userIdOrIds.length > 0;
+
+  let query = supabase.from('documents').select(selectWithQuality);
+  if (isSingleUser) query = query.eq('user_id', userIdOrIds);
+  if (hasList) query = query.in('user_id', userIdOrIds);
+
+  let result = await query;
+  if (result.error && isMissingDocumentQualityColumnsError(result.error)) {
+    let fallbackQuery = supabase.from('documents').select(selectWithoutQuality);
+    if (isSingleUser) fallbackQuery = fallbackQuery.eq('user_id', userIdOrIds);
+    if (hasList) fallbackQuery = fallbackQuery.in('user_id', userIdOrIds);
+    result = await fallbackQuery;
+  }
+
+  return result;
+}
+
 function err(msg, status = 400) {
   return new Response(JSON.stringify({ error: msg }), { status, headers: HEADERS });
 }
@@ -118,10 +143,7 @@ export async function onRequest(context) {
           .order('created_at', { ascending: false });
         if (applicationsError) throw applicationsError;
 
-        const { data: documents, error: documentsError } = await supabase
-          .from('documents')
-          .select('document_type, status, quality_flag, quality_flags')
-          .eq('user_id', data.user_id);
+        const { data: documents, error: documentsError } = await fetchDocumentsWithFallback(supabase, data.user_id);
         if (documentsError) throw documentsError;
 
         return new Response(
@@ -152,7 +174,7 @@ export async function onRequest(context) {
       if (userIds.length) {
         const [{ data: applicationRows, error: applicationsError }, { data: documentRows, error: documentsError }] = await Promise.all([
           supabase.from('applications').select('user_id, status').in('user_id', userIds),
-          supabase.from('documents').select('user_id, document_type, status, quality_flag, quality_flags').in('user_id', userIds)
+          fetchDocumentsWithFallback(supabase, userIds)
         ]);
         if (applicationsError) throw applicationsError;
         if (documentsError) throw documentsError;

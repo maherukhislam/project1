@@ -194,6 +194,8 @@ create table if not exists public.documents (
   file_name text not null,
   file_url text not null,
   file_size bigint,
+  quality_flag text,
+  quality_flags jsonb not null default '[]'::jsonb,
   mime_type text,
   review_notes text,
   rejection_reason text,
@@ -310,6 +312,8 @@ alter table public.applications
   add column if not exists updated_at timestamptz not null default now();
 
 alter table public.documents
+  add column if not exists quality_flag text,
+  add column if not exists quality_flags jsonb not null default '[]'::jsonb,
   add column if not exists mime_type text,
   add column if not exists review_notes text,
   add column if not exists rejection_reason text,

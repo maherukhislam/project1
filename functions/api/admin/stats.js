@@ -12,6 +12,21 @@ function collectProgramIntakes(program = {}) {
   return [{ application_deadline: program.application_deadline, status: program.is_active === false ? 'Closed' : 'Open' }];
 }
 
+const isMissingDocumentQualityColumnsError = (error) =>
+  error?.code === '42703'
+  && (error?.message?.includes('quality_flag') || error?.message?.includes('quality_flags'));
+
+async function fetchDocumentsWithFallback(supabase) {
+  const selectWithQuality = 'user_id, document_type, status, quality_flag, quality_flags';
+  const selectWithoutQuality = 'user_id, document_type, status';
+
+  let result = await supabase.from('documents').select(selectWithQuality);
+  if (result.error && isMissingDocumentQualityColumnsError(result.error)) {
+    result = await supabase.from('documents').select(selectWithoutQuality);
+  }
+  return result;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
@@ -55,7 +70,7 @@ export async function onRequest(context) {
       supabase.from('scholarships').select('id', { count: 'exact' }),
       supabase.from('applications').select('id, user_id, status, counselor_id, programs(universities(country, name))'),
       supabase.from('profiles').select('user_id, name').eq('role', 'counselor'),
-      supabase.from('documents').select('user_id, document_type, status, quality_flag, quality_flags')
+      fetchDocumentsWithFallback(supabase)
     ]);
 
     const appsByStatus = {};
