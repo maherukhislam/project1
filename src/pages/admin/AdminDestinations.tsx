@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Plus, Search, Edit2, Trash2, X, Save, Globe, Users, DollarSign, GraduationCap, Building } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Save, Globe, Users, DollarSign, GraduationCap, Building } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 
