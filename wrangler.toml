@@ -9,7 +9,7 @@ pages_build_output_dir = "dist"
 #   e.g.  https://pub-xxxxxxxxxxxx.r2.dev
 #         https://files.yourdomain.com
 #         https://your-bucket.s3.amazonaws.com
-STORAGE_BASE_URL = "https://files.example.com"
+STORAGE_BASE_URL = "https://pub-f7464438031f421b97023493fd4c6744.r2.dev"
 
 # ── R2 bucket binding ─────────────────────────────────────────────────────────
 # In Cloudflare Pages dashboard → Settings → Functions → R2 Bucket Bindings:
