@@ -6,7 +6,7 @@ export async function onRequest(context) {
   
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json'
   };
@@ -51,6 +51,13 @@ export async function onRequest(context) {
       const { data, error } = await supabase.from('countries').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });
+    }
+
+    if (request.method === 'DELETE') {
+      const { id } = body;
+      const { error } = await supabase.from('countries').delete().eq('id', id);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), { headers });
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
