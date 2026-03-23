@@ -260,27 +260,99 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="px-6 py-24">
-        <div className="mx-auto max-w-5xl">
-          <GlassCard className="relative overflow-hidden p-10 text-center md:p-14" hover={false}>
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.2),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.18),transparent_40%)]" />
-            <div className="relative">
-              <h2 className="brand-display text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-                Ready To Move Forward?
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-                Build your profile, discover realistic matches, and take the next step with counselor-backed planning.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link to="/signup" className="rounded-2xl bg-slate-900 px-6 py-3.5 text-sm font-medium text-white hover:bg-slate-800">
-                  Create Free Account
-                </Link>
-                <Link to="/contact" className="rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900">
-                  Speak With Counselor
-                </Link>
+      <section className="relative overflow-hidden px-6 py-28">
+        {/* Dark gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900" />
+
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
+
+        {/* Decorative glow orbs */}
+        <div className="pointer-events-none absolute -top-32 right-0 h-[500px] w-[500px] rounded-full bg-teal-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-0 h-[400px] w-[400px] rounded-full bg-sky-500/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-4xl text-center">
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-8 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-sm text-teal-300"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Start Your Journey Today
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.55, delay: 0.08 }}
+            className="brand-display text-5xl font-semibold tracking-tight text-white md:text-6xl"
+          >
+            Ready to Move{' '}
+            <span className="bg-gradient-to-r from-teal-400 to-sky-400 bg-clip-text text-transparent">
+              Forward?
+            </span>
+          </motion.h2>
+
+          {/* Subtext */}
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-300"
+          >
+            Build your profile, discover realistic matches, and take the next step with counselor-backed planning.
+          </motion.p>
+
+          {/* Stats row */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.22 }}
+            className="mt-12 flex flex-wrap justify-center gap-10"
+          >
+            {[
+              { value: '500+',  label: 'Universities'  },
+              { value: '40+',   label: 'Countries'      },
+              { value: '$2M+',  label: 'In Scholarships' },
+            ].map(stat => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-bold text-white">{stat.value}</div>
+                <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
               </div>
-            </div>
-          </GlassCard>
+            ))}
+          </motion.div>
+
+          {/* Divider */}
+          <div className="mx-auto mt-10 h-px w-24 bg-gradient-to-r from-transparent via-teal-500/40 to-transparent" />
+
+          {/* Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-10 flex flex-wrap justify-center gap-4"
+          >
+            <Link
+              to="/signup"
+              className="rounded-2xl bg-gradient-to-r from-teal-500 to-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition-all hover:opacity-90 hover:shadow-teal-500/40"
+            >
+              Create Free Account
+            </Link>
+            <Link
+              to="/contact"
+              className="rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+            >
+              Speak With Counselor
+            </Link>
+          </motion.div>
         </div>
       </section>
     </div>
