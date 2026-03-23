@@ -47,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
 
   return (
     <nav
-      className={`relative flex h-full shrink-0 flex-col border-r border-emerald-950/10 bg-[#11251f] transition-all duration-300 ${
+      className={`relative flex h-screen shrink-0 flex-col border-r border-emerald-950/10 bg-[#11251f] transition-all duration-300 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -183,9 +183,10 @@ const CounselorLayout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen w-full bg-[#0b1512] text-white">
-      <div className="sticky top-0 hidden h-screen lg:flex">
+      {/* Desktop sidebar */}
+      <aside className="sticky top-0 hidden h-screen shrink-0 lg:block">
         <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} setMobileOpen={setMobileOpen} />
-      </div>
+      </aside>
 
       <div
         className={`fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 lg:hidden ${
