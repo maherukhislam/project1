@@ -51,9 +51,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
         collapsed ? 'w-16' : 'w-64'
       }`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.12),transparent_38%),linear-gradient(180deg,rgba(17,37,31,0.98),rgba(12,24,21,0.98))]" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.12),transparent_38%)]" />
 
-      <div className={`relative border-b border-white/10 ${collapsed ? 'p-3' : 'p-4'}`}>
+      <div className={`relative z-10 border-b border-white/10 ${collapsed ? 'p-3' : 'p-4'}`}>
         <Link
           to="/"
           className={`flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5 ${collapsed ? 'justify-center' : ''}`}
@@ -70,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
         </Link>
       </div>
 
-      <div className={`relative border-b border-white/10 ${collapsed ? 'p-3' : 'p-4'}`}>
+      <div className={`relative z-10 border-b border-white/10 ${collapsed ? 'p-3' : 'p-4'}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-xs font-bold text-white">
             {profile?.name?.charAt(0)?.toUpperCase() || 'C'}
@@ -84,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
         </div>
       </div>
 
-      <div className="relative flex-1 space-y-0.5 overflow-y-auto p-2">
+      <div className="relative z-10 flex-1 space-y-0.5 overflow-y-auto p-2">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.path, item.exact);
           return (
@@ -108,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
       </div>
 
       {!collapsed && (
-        <div className="relative border-t border-white/10 p-2">
+        <div className="relative z-10 border-t border-white/10 p-2">
           <p className="mb-1 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-100/40">
             Account
           </p>
@@ -145,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed, setMobileOpe
 
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="relative flex items-center border-t border-white/10 p-3 transition-colors hover:bg-white/5"
+        className="relative z-10 flex items-center border-t border-white/10 p-3 transition-colors hover:bg-white/5"
       >
         <div className="grid h-10 w-10 place-content-center">
           <ChevronsRight className={`h-4 w-4 text-emerald-100/50 transition-transform ${collapsed ? '' : 'rotate-180'}`} />
