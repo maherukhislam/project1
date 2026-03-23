@@ -48,6 +48,7 @@ const AdminDocuments    = lazy(() => import('./pages/admin/AdminDocuments'));
 const AdminBlog         = lazy(() => import('./pages/admin/AdminBlog'));
 const AdminCMS          = lazy(() => import('./pages/admin/AdminCMS'));
 const AdminCounselors   = lazy(() => import('./pages/admin/AdminCounselors'));
+const AdminDestinations = lazy(() => import('./pages/admin/AdminDestinations'));
 
 // Counselor Pages
 const CounselorLayout       = lazy(() => import('./pages/counselor/CounselorLayout'));
@@ -146,6 +147,7 @@ function App() {
                 <Route path="documents"     element={<AdminDocuments />} />
                 <Route path="blog"          element={<AdminBlog />} />
                 <Route path="cms"           element={<AdminCMS />} />
+                <Route path="destinations"  element={<AdminDestinations />} />
                 <Route path="change-password" element={<ChangePassword />} />
               </Route>
 
