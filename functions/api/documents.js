@@ -162,14 +162,35 @@ export async function onRequest(context) {
       return new Response(JSON.stringify(data), { status: 201, headers: HEADERS });
     }
 
-    // ── PUT — admin reviews a document status ─────────────────────────────────
+    // ── PUT — admin or counselor reviews a document status ───────────────────
     if (request.method === 'PUT') {
-      if (!isAdmin) return err('Admin access required', 403);
+      if (!isAdmin && !isCounselor) return err('Admin or Counselor access required', 403);
 
       const { id, status } = body;
 
       if (!id)                          return err('id is required');
       if (!ALLOWED_STATUSES.has(status)) return err(`status must be one of: ${[...ALLOWED_STATUSES].join(', ')}`);
+
+      // If counselor, verify the document belongs to an assigned student
+      if (isCounselor) {
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('user_id')
+          .eq('id', id)
+          .single();
+        if (docError || !docData) return err('Document not found', 404);
+
+        const { data: studentProfile, error: studentError } = await supabase
+          .from('profiles')
+          .select('assigned_counselor_id')
+          .eq('user_id', docData.user_id)
+          .eq('role', 'student')
+          .maybeSingle();
+        if (studentError) throw studentError;
+        if (!studentProfile || studentProfile.assigned_counselor_id !== user.id) {
+          return err('Counselor can only review documents of assigned students', 403);
+        }
+      }
 
       const { data, error } = await supabase
         .from('documents')
@@ -188,7 +209,7 @@ export async function onRequest(context) {
         action: 'document.reviewed',
         entity_type: 'document',
         entity_id: String(data.id),
-        details: { status }
+        details: { status, reviewer_role: isAdmin ? 'admin' : 'counselor' }
       });
 
       return new Response(JSON.stringify(data), { headers: HEADERS });
