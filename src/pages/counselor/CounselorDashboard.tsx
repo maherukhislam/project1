@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle2, Clock3, FileWarning, FolderKanban, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock3, FileWarning, FolderKanban, Users, Circle } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 
@@ -13,6 +13,38 @@ const stageLabels: Record<string, string> = {
   offer_received: 'Offer Received',
   visa_processing: 'Visa Processing',
   completed: 'Completed'
+};
+
+// Helper to format last seen time
+const formatLastSeen = (lastSeenAt: string | null): string => {
+  if (!lastSeenAt) return 'Never';
+  
+  const lastSeen = new Date(lastSeenAt);
+  const now = new Date();
+  const diffMs = now.getTime() - lastSeen.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Determine if user is considered online (active within last 5 minutes)
+const isUserOnline = (user: any): boolean => {
+  if (user.is_online === true) {
+    if (user.last_seen_at) {
+      const lastSeen = new Date(user.last_seen_at);
+      const diffMs = Date.now() - lastSeen.getTime();
+      return diffMs < 5 * 60 * 1000;
+    }
+    return true;
+  }
+  return false;
 };
 
 const CounselorDashboard: React.FC = () => {
@@ -79,6 +111,7 @@ const CounselorDashboard: React.FC = () => {
   const summary = useMemo(
     () => ({
       totalStudents: students.length,
+      onlineNow: students.filter((student) => isUserOnline(student)).length,
       readyToApply: students.filter((student) => student.pipeline_stage === 'ready_to_apply').length,
       docsNeedAttention: students.filter((student) => (student.document_readiness?.score || 0) < 100).length,
       activeApplications: applications.filter((application) => ['submitted', 'under_review', 'accepted', 'visa_processing'].includes(application.status)).length
@@ -131,9 +164,25 @@ const CounselorDashboard: React.FC = () => {
         </div>
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-emerald-50/60">Assigned Students</p>
+            <Users className="h-5 w-5 text-emerald-200" />
+          </div>
+          <p className="mt-4 text-3xl font-bold text-white">{summary.totalStudents}</p>
+        </div>
+        <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-emerald-400 flex items-center gap-1.5">
+              <Circle className="h-2 w-2 fill-emerald-400" />
+              Online Now
+            </p>
+            <Circle className="h-5 w-5 text-emerald-400" />
+          </div>
+          <p className="mt-4 text-3xl font-bold text-emerald-400">{summary.onlineNow}</p>
+        </div>
         {[
-          { label: 'Assigned Students', value: summary.totalStudents, icon: Users },
           { label: 'Ready To Apply', value: summary.readyToApply, icon: CheckCircle2 },
           { label: 'Docs Need Attention', value: summary.docsNeedAttention, icon: FileWarning },
           { label: 'Active Applications', value: summary.activeApplications, icon: FolderKanban }
@@ -164,15 +213,41 @@ const CounselorDashboard: React.FC = () => {
             {priorityStudents.length > 0 ? priorityStudents.map((student) => (
               <div key={student.id} className="rounded-2xl border border-white/10 bg-black/10 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-white">{student.name || 'Student'}</p>
-                    <p className="text-sm text-emerald-50/60">{student.email}</p>
+                  <div className="flex items-center gap-3">
+                    {/* Avatar with online indicator */}
+                    <div className="relative">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-sm font-semibold text-white">
+                        {student.name?.charAt(0) || 'S'}
+                      </div>
+                      <span
+                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-black/20 ${
+                          isUserOnline(student) ? 'bg-emerald-500' : 'bg-slate-500'
+                        }`}
+                        title={isUserOnline(student) ? 'Online' : `Last seen: ${formatLastSeen(student.last_seen_at)}`}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-white">{student.name || 'Student'}</p>
+                        <span className={`text-xs ${isUserOnline(student) ? 'text-emerald-400' : 'text-emerald-50/40'}`}>
+                          {isUserOnline(student) ? 'Online' : formatLastSeen(student.last_seen_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-emerald-50/60">{student.email}</p>
+                    </div>
                   </div>
                   <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
                     {stageLabels[student.pipeline_stage] || 'New Lead'}
                   </span>
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                <div className="mt-4 grid gap-3 md:grid-cols-5">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-emerald-50/40">Status</p>
+                    <p className={`mt-1 text-sm font-semibold flex items-center gap-1.5 ${isUserOnline(student) ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      <Circle className={`h-2 w-2 ${isUserOnline(student) ? 'fill-emerald-400' : 'fill-slate-400'}`} />
+                      {isUserOnline(student) ? 'Online' : 'Offline'}
+                    </p>
+                  </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.16em] text-emerald-50/40">Lead</p>
                     <p className="mt-1 text-sm font-semibold text-white">{student.lead_score || 0}</p>
