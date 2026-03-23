@@ -10,7 +10,6 @@ import {
   Clock,
   Eye,
   X,
-  FileText,
   GraduationCap,
   CheckCircle
 } from 'lucide-react';
