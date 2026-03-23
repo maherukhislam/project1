@@ -115,6 +115,15 @@ export async function onRequest(context) {
 
     const hotLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Hot Lead').length;
     const warmLeadCount = (students.data || []).filter((student) => student.lead_temperature === 'Warm Lead').length;
+    
+    // Count online users (active within last 5 minutes)
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    const onlineStudentsCount = (students.data || []).filter((student) => {
+      if (student.is_online && student.last_seen_at) {
+        return new Date(student.last_seen_at).getTime() > fiveMinutesAgo;
+      }
+      return false;
+    }).length;
     const applicationsByUser = new Map();
     (applications.data || []).forEach((application) => {
       const items = applicationsByUser.get(application.user_id) || [];
@@ -151,6 +160,7 @@ export async function onRequest(context) {
         applicationsByStatus: appsByStatus,
         hotLeadCount,
         warmLeadCount,
+        onlineStudentsCount,
         conversion: {
           leads_to_applications: percentage(applications.data?.length || 0, students.count || 0),
           applications_to_offers: percentage(offerCount, applications.data?.length || 0),

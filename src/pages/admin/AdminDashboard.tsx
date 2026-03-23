@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, GraduationCap, Award, FileText, BookOpen, ChevronRight, AlertCircle, ShieldPlus } from 'lucide-react';
+import { Users, GraduationCap, Award, FileText, BookOpen, ChevronRight, AlertCircle, ShieldPlus, Circle } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
 
@@ -111,10 +111,17 @@ const AdminDashboard: React.FC = () => {
                 Control the admissions pipeline, monitor student progress, and keep the platform moving with a single operations view.
               </p>
 
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students</p>
                   <p className="mt-2 text-2xl font-bold text-white">{totalStudents}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-emerald-400 flex items-center gap-1.5">
+                    <Circle className="h-2 w-2 fill-emerald-400" />
+                    Online now
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-emerald-400">{stats?.onlineStudentsCount || 0}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Applications</p>
