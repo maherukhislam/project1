@@ -54,7 +54,7 @@ export async function onRequest(context) {
       if (request.method !== 'GET') return err('Method not allowed', 405);
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, name, email, created_at, role, preferred_country, counselor_specializations, counselor_capacity, counselor_active')
+        .select('id, user_id, name, email, created_at, role, preferred_country, counselor_specializations, counselor_capacity, counselor_active, is_online, last_seen_at')
         .in('role', ['admin', 'counselor'])
         .order('created_at', { ascending: false });
 

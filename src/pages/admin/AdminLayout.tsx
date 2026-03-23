@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldPlus,
   Upload,
+  UserCog,
   Users,
   X,
   Zap,
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { path: '/admin/programs',     icon: BookOpen,     label: 'Programs' },
   { path: '/admin/scholarships', icon: Award,        label: 'Scholarships' },
   { path: '/admin/admins',       icon: ShieldPlus,   label: 'Admin & Roles' },
+  { path: '/admin/counselors',   icon: UserCog,      label: 'Counselors' },
   { path: '/admin/blog',         icon: BarChart3,    label: 'Content / CMS' },
   { path: '/admin/cms',          icon: PenLine,      label: 'Page Editor' },
 ];
