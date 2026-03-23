@@ -201,7 +201,7 @@ const CounselorLayout: React.FC = () => {
       )}
 
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(45,212,191,0.10),transparent_28%),linear-gradient(180deg,#0b1512_0%,#11201b_45%,#132a23_100%)]" />
         </div>
 
