@@ -4,13 +4,8 @@ import {
   Users,
   Search,
   UserCog,
-  Mail,
   MapPin,
-  Briefcase,
   Circle,
-  Clock,
-  CheckCircle,
-  XCircle,
   ChevronRight,
   X,
   Eye
@@ -19,7 +14,7 @@ import { api } from '../../lib/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // Helper to format last seen time
-const formatLastSeen = (lastSeenAt: string | null): string => {
+const formatLastSeen = (lastSeenAt: string | null | undefined): string => {
   if (!lastSeenAt) return 'Never';
   
   const lastSeen = new Date(lastSeenAt);
