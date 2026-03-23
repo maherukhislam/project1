@@ -18,7 +18,8 @@ import NotificationBell from '../../components/NotificationBell';
 const NAV_ITEMS = [
   { path: '/counselor', icon: Home, label: 'Dashboard', exact: true },
   { path: '/counselor/students', icon: Users, label: 'My Students' },
-  { path: '/counselor/applications', icon: FileText, label: 'My Applications' }
+  { path: '/counselor/applications', icon: FileText, label: 'My Applications' },
+  { path: '/counselor/documents', icon: FileText, label: 'Document Review' }
 ];
 
 const ACCOUNT_ITEMS = [

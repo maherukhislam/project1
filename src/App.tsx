@@ -55,6 +55,7 @@ const CounselorLayout       = lazy(() => import('./pages/counselor/CounselorLayo
 const CounselorDashboard    = lazy(() => import('./pages/counselor/CounselorDashboard'));
 const CounselorStudents     = lazy(() => import('./pages/counselor/CounselorStudents'));
 const CounselorApplications = lazy(() => import('./pages/counselor/CounselorApplications'));
+const CounselorDocuments    = lazy(() => import('./pages/counselor/CounselorDocuments'));
 
 // Handle Google redirect on app load
 handleGoogleRedirect();
@@ -163,6 +164,7 @@ function App() {
                 <Route index                element={<CounselorDashboard />} />
                 <Route path="students"      element={<CounselorStudents />} />
                 <Route path="applications"  element={<CounselorApplications />} />
+                <Route path="documents"     element={<CounselorDocuments />} />
                 <Route path="change-password" element={<ChangePassword />} />
               </Route>
 
