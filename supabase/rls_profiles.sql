@@ -1,4 +1,5 @@
--- Fix recursive RLS policies on public.profiles.
+-- Fix recursive RLS policies on public.profiles while preserving counselor
+-- access to assigned student profiles.
 --
 -- Run this in the Supabase SQL editor with a service-role connection.
 -- The previous policy likely queried public.profiles from inside a
@@ -25,6 +26,24 @@ $$;
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to authenticated;
 
+create or replace function public.is_counselor()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where user_id = auth.uid()
+      and role = 'counselor'
+  );
+$$;
+
+revoke all on function public.is_counselor() from public;
+grant execute on function public.is_counselor() to authenticated;
+
 do $$
 declare
   policy_row record;
@@ -50,6 +69,11 @@ to authenticated
 using (
   auth.uid() = user_id
   or public.is_admin()
+  or (
+    public.is_counselor()
+    and role = 'student'
+    and assigned_counselor_id = auth.uid()
+  )
 );
 
 create policy "Profiles insert own or admin"

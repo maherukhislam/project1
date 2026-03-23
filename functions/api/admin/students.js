@@ -66,6 +66,9 @@ const HEADERS = {
   'Content-Type': 'application/json'
 };
 
+const isRecursiveProfilesPolicyError = (error) =>
+  Boolean(error?.message?.includes('infinite recursion detected in policy for relation "profiles"'));
+
 function err(msg, status = 400) {
   return new Response(JSON.stringify({ error: msg }), { status, headers: HEADERS });
 }
@@ -214,6 +217,15 @@ export async function onRequest(context) {
     return err('Method not allowed', 405);
   } catch (e) {
     console.error('[admin/students] error:', e);
+    if (isRecursiveProfilesPolicyError(e)) {
+      return new Response(
+        JSON.stringify({
+          error: 'Database policy configuration error',
+          details: 'Apply supabase/rls_profiles.sql to replace the recursive profiles policy.'
+        }),
+        { status: 500, headers: HEADERS }
+      );
+    }
     return new Response(
       JSON.stringify({ error: 'An internal error occurred. Please try again.' }),
       { status: 500, headers: HEADERS }

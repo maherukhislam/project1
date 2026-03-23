@@ -68,7 +68,11 @@ to authenticated
 using (
   auth.uid() = user_id
   or public.is_admin()
-  or (public.is_counselor() and public.is_assigned_counselor(user_id))
+  or (
+    public.is_counselor()
+    and role = 'student'
+    and assigned_counselor_id = auth.uid()
+  )
 );
 
 drop policy if exists "Applications select own or admin" on public.applications;
