@@ -12,8 +12,7 @@ import {
   Mail,
   Phone,
   MapPin,
-  X,
-  Filter
+  X
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
