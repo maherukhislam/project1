@@ -16,7 +16,8 @@ import {
   Clock,
   Download,
   ExternalLink,
-  Image
+  Image,
+  Circle
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
@@ -73,6 +74,39 @@ const deriveStudentStage = (student: any, studentApps: any[]) => {
   if ((student.profile_completion || 0) >= 80) return 'ready_to_apply';
   if ((student.profile_completion || 0) > 0) return 'profile_incomplete';
   return 'new_lead';
+};
+
+// Helper to format last seen time
+const formatLastSeen = (lastSeenAt: string | null): string => {
+  if (!lastSeenAt) return 'Never';
+  
+  const lastSeen = new Date(lastSeenAt);
+  const now = new Date();
+  const diffMs = now.getTime() - lastSeen.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Determine if user is considered online (active within last 5 minutes)
+const isUserOnline = (student: any): boolean => {
+  if (student.is_online === true) {
+    // Double-check with last_seen_at - consider online if seen within 5 mins
+    if (student.last_seen_at) {
+      const lastSeen = new Date(student.last_seen_at);
+      const diffMs = Date.now() - lastSeen.getTime();
+      return diffMs < 5 * 60 * 1000; // 5 minutes
+    }
+    return true;
+  }
+  return false;
 };
 
 const priorityScore = (student: any, stage: string) => {
@@ -209,11 +243,12 @@ const AdminStudents: React.FC = () => {
   const selectedStage = selectedStudent ? (studentStages[selectedStudent.user_id] || 'new_lead') : 'new_lead';
   const selectedNotes = selectedStudent ? (notesByUser[selectedStudent.user_id] || []) : [];
 
-  const { totalStudents, readyStudents, activeApplicants, needsAttention } = useMemo(() => ({
+  const { totalStudents, readyStudents, activeApplicants, needsAttention, onlineNow } = useMemo(() => ({
     totalStudents:    students.length,
     readyStudents:    students.filter((s) => (s.profile_completion || 0) >= 80).length,
     activeApplicants: students.filter((s) => (applicationsByUser[s.user_id] || []).length > 0).length,
-    needsAttention:   students.filter((s) => (s.profile_completion || 0) < 60 && !(applicationsByUser[s.user_id] || []).length).length
+    needsAttention:   students.filter((s) => (s.profile_completion || 0) < 60 && !(applicationsByUser[s.user_id] || []).length).length,
+    onlineNow:        students.filter((s) => isUserOnline(s)).length
   }), [students, applicationsByUser]);
 
   const updateApplicationStatus = async (appId: number, status: string) => {
@@ -322,10 +357,17 @@ const AdminStudents: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[420px]">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 lg:min-w-[520px]">
             <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Total</p>
               <p className="mt-2 text-2xl font-bold text-white">{totalStudents}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-emerald-400 flex items-center gap-1.5">
+                <Circle className="h-2 w-2 fill-emerald-400" />
+                Online
+              </p>
+              <p className="mt-2 text-2xl font-bold text-emerald-400">{onlineNow}</p>
             </div>
             <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Ready</p>
@@ -401,17 +443,31 @@ const AdminStudents: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-base font-semibold text-white">
-                        {student.profile_picture_url ? (
-                          <img src={student.profile_picture_url} alt={student.name || 'Student'} className="h-full w-full rounded-full object-cover" />
-                        ) : (
-                          student.name?.charAt(0) || 'S'
-                        )}
+<div className="flex items-center gap-3">
+                                      <div className="relative">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-base font-semibold text-white">
+                          {student.profile_picture_url ? (
+                            <img src={student.profile_picture_url} alt={student.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                          ) : (
+                            student.name?.charAt(0) || 'S'
+                          )}
+                        </div>
+                        {/* Online status indicator */}
+                        <span 
+                          className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-slate-800 ${
+                            isUserOnline(student) ? 'bg-emerald-500' : 'bg-slate-500'
+                          }`}
+                          title={isUserOnline(student) ? 'Online' : `Last seen: ${formatLastSeen(student.last_seen_at)}`}
+                        />
                       </div>
                       <div>
                         <p className="font-semibold text-white">{student.name || 'Unknown student'}</p>
-                        <p className="text-sm text-slate-400">{student.email}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-slate-400">{student.email}</p>
+                          <span className={`text-xs ${isUserOnline(student) ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {isUserOnline(student) ? 'Online' : formatLastSeen(student.last_seen_at)}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -464,17 +520,40 @@ const AdminStudents: React.FC = () => {
             <div className="rounded-3xl border border-slate-700 bg-slate-800/50 overflow-hidden">
               <div className="border-b border-slate-700 p-6">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-lg font-bold text-white">
-                      {selectedStudent.profile_picture_url ? (
-                        <img src={selectedStudent.profile_picture_url} alt={selectedStudent.name || 'Student'} className="h-full w-full rounded-full object-cover" />
-                      ) : (
-                        selectedStudent.name?.charAt(0) || 'S'
-                      )}
+<div className="flex items-center gap-4">
+                                    <div className="relative">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-lg font-bold text-white">
+                        {selectedStudent.profile_picture_url ? (
+                          <img src={selectedStudent.profile_picture_url} alt={selectedStudent.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                        ) : (
+                          selectedStudent.name?.charAt(0) || 'S'
+                        )}
+                      </div>
+                      {/* Online status indicator */}
+                      <span 
+                        className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-slate-800 ${
+                          isUserOnline(selectedStudent) ? 'bg-emerald-500' : 'bg-slate-500'
+                        }`}
+                      />
                     </div>
                     <div>
-                      <p className="text-xl font-bold text-white">{selectedStudent.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xl font-bold text-white">{selectedStudent.name}</p>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                          isUserOnline(selectedStudent) 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                        }`}>
+                          <Circle className={`h-2 w-2 ${isUserOnline(selectedStudent) ? 'fill-emerald-400' : 'fill-slate-400'}`} />
+                          {isUserOnline(selectedStudent) ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
                       <p className="text-sm text-slate-400">{selectedStudent.email}</p>
+                      {!isUserOnline(selectedStudent) && selectedStudent.last_seen_at && (
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Last active: {formatLastSeen(selectedStudent.last_seen_at)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <button
@@ -547,6 +626,8 @@ const AdminStudents: React.FC = () => {
                         { icon: GraduationCap, label: 'Education Level', value: selectedStudent.education_level },
                         { icon: GraduationCap, label: 'Study Level', value: selectedStudent.study_level },
                         { icon: Calendar, label: 'Created', value: selectedStudent.created_at ? new Date(selectedStudent.created_at).toLocaleDateString() : '-' },
+                        { icon: Circle, label: 'Status', value: isUserOnline(selectedStudent) ? 'Online now' : 'Offline' },
+                        { icon: Clock, label: 'Last Active', value: selectedStudent.last_seen_at ? formatLastSeen(selectedStudent.last_seen_at) : 'Never' },
                         { icon: CheckCircle, label: 'Completion', value: `${selectedStudent.profile_completion || 0}%` },
                         { icon: FileText, label: 'Preferred Country', value: selectedStudent.preferred_country },
                         { icon: FileText, label: 'Preferred Subject', value: selectedStudent.preferred_subject },

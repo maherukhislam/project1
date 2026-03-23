@@ -156,7 +156,7 @@ export async function onRequest(context) {
         .from('profiles')
         .select(
           minimal
-            ? 'id, user_id, name, email, profile_picture_url, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags, assigned_counselor_id'
+            ? 'id, user_id, name, email, profile_picture_url, role, created_at, profile_completion, lead_score, lead_temperature, visa_risk_level, duplicate_flags, fraud_flags, assigned_counselor_id, is_online, last_seen_at'
             : '*'
         )
         .eq('role', 'student')

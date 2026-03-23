@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import supabase, { supabaseEnabled } from '../lib/supabase';
 import { api } from '../lib/api';
+import { useActivityTracker } from '../hooks/useActivityTracker';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface User {
@@ -73,6 +74,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const authBypass = import.meta.env.VITE_AUTH_BYPASS === 'true' && import.meta.env.DEV;
+
+  // Track user activity when logged in
+  const { markOffline } = useActivityTracker({ 
+    enabled: !!user && !authBypass,
+    heartbeatInterval: 60000 // 1 minute
+  });
 
   const ensureSupabaseEnabled = () => {
     if (!supabaseEnabled) {
@@ -189,6 +196,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     ensureSupabaseEnabled();
+    // Mark user as offline before signing out
+    await markOffline();
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
