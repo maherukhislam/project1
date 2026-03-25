@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Clock, MessageSquare, CheckCircle } from 'lucide-react';
 import GlassCard from '../components/GlassCard';
 import { useCms } from '../contexts/CmsContext';
+import { useFormDraft } from '../hooks/useFormDraft';
 
 const Contact: React.FC = () => {
   const { content: { contact: cms } } = useCms();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData, clearDraft, hasRestored] = useFormDraft('contact-form', {
     name: '',
     email: '',
     phone: '',
@@ -18,6 +19,7 @@ const Contact: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    clearDraft();
     setSubmitted(true);
   };
 
@@ -133,7 +135,14 @@ const Contact: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-6">Send us a Message</h2>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-slate-900">Send us a Message</h2>
+                      {hasRestored && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-medium border border-amber-200/50">
+                          <Clock className="w-3.5 h-3.5" /> Draft restored
+                        </span>
+                      )}
+                    </div>
                     <form onSubmit={handleSubmit} className="space-y-5">
                       <div className="grid md:grid-cols-2 gap-5">
                         <div>

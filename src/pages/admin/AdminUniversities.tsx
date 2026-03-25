@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, Plus, Search, MapPin, Star, Edit2, Trash2, X, Save, Building } from 'lucide-react';
+import { GraduationCap, Plus, Search, MapPin, Star, Edit2, Trash2, X, Save, Building, Clock } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 const AdminUniversities: React.FC = () => {
   const [universities, setUniversities] = useState<any[]>([]);
@@ -11,16 +12,22 @@ const AdminUniversities: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    country: '',
-    description: '',
-    ranking: '',
-    logo_url: '',
-    tuition_min: '',
-    tuition_max: '',
-    acceptance_rate: ''
-  });
+  
+  // Use a unique draft key based on whether we are editing an existing university or creating a new one
+  const [formData, setFormData, clearDraft, hasRestored] = useFormDraft(
+    `admin_university_${editing?.id || 'new'}`,
+    {
+      name: '',
+      country: '',
+      description: '',
+      ranking: '',
+      logo_url: '',
+      tuition_min: '',
+      tuition_max: '',
+      acceptance_rate: ''
+    },
+    [editing] // Re-evaluate draft logic when switching between "Edit" and "New" modes
+  );
 
   const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands', 'France', 'Ireland', 'New Zealand', 'Singapore'];
 
@@ -76,6 +83,7 @@ const AdminUniversities: React.FC = () => {
       }
 
       setShowModal(false);
+      clearDraft();
       resetForm();
       fetchUniversities();
     } catch (err) {
@@ -257,9 +265,16 @@ const AdminUniversities: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
 
-              <h2 className="text-2xl font-bold text-white mb-6">
-                {editing ? 'Edit University' : 'Add University'}
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  {editing ? 'Edit University' : 'Add University'}
+                </h2>
+                {hasRestored && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium border border-amber-500/30">
+                    <Clock className="w-3.5 h-3.5" /> Draft restored
+                  </span>
+                )}
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>

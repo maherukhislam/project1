@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Plus, Search, Edit2, Trash2, X, Save, Award } from 'lucide-react';
+import { BookOpen, Plus, Search, Edit2, Trash2, X, Save, Award, Clock } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { api } from '../../lib/api';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 const emptyIntake = () => ({
   name: '',
@@ -51,17 +52,23 @@ const AdminPrograms: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    university_id: '',
-    name: '',
-    degree_level: '',
-    duration: '',
-    tuition_fee: '',
-    min_gpa_required: '',
-    min_english_score: '',
-    intakes: [emptyIntake()],
-    scholarship_available: false
-  });
+  
+  // Use a unique draft key based on whether we are editing an existing program or creating a new one
+  const [formData, setFormData, clearDraft, hasRestored] = useFormDraft(
+    `admin_program_${editing?.id || 'new'}`,
+    {
+      university_id: '',
+      name: '',
+      degree_level: '',
+      duration: '',
+      tuition_fee: '',
+      min_gpa_required: '',
+      min_english_score: '',
+      intakes: [emptyIntake()],
+      scholarship_available: false
+    },
+    [editing] // Re-evaluate draft logic when switching between "Edit" and "New" modes
+  );
 
   const degreeLevels = ['Bachelor', 'Master', 'PhD'];
 
@@ -135,6 +142,7 @@ const AdminPrograms: React.FC = () => {
       }
 
       setShowModal(false);
+      clearDraft();
       resetForm();
       fetchData();
     } catch (err) {
@@ -364,9 +372,16 @@ const AdminPrograms: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
 
-              <h2 className="text-2xl font-bold text-white mb-6">
-                {editing ? 'Edit Program' : 'Add Program'}
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  {editing ? 'Edit Program' : 'Add Program'}
+                </h2>
+                {hasRestored && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium border border-amber-500/30">
+                    <Clock className="w-3.5 h-3.5" /> Draft restored
+                  </span>
+                )}
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>

@@ -6,6 +6,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../lib/api';
 import supabase from '../../lib/supabase';
+import { useFormDraft } from '../../hooks/useFormDraft';
 
 const countries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands', 'France', 'Ireland', 'New Zealand', 'Singapore'];
 const nationalities = ['American', 'British', 'Canadian', 'Chinese', 'Indian', 'Nigerian', 'Pakistani', 'Bangladeshi', 'Vietnamese', 'Indonesian', 'Other'];
@@ -41,32 +42,39 @@ const Profile: React.FC = () => {
   const [error, setError] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [formData, setFormData] = useState(emptyForm);
+
+  // Use the new draft hook rather than standard useState
+  const [formData, setFormData, clearDraft, hasRestored] = useFormDraft(`profile_form_${profile?.id || 'new'}`, emptyForm);
 
   useEffect(() => {
     if (!profile) return;
-    setFormData({
-      name: profile.name || '',
-      phone: profile.phone || '',
-      nationality: profile.nationality || '',
-      preferred_country: profile.preferred_country || '',
-      education_level: profile.education_level || '',
-      academic_system: profile.academic_system || '',
-      gpa: profile.gpa?.toString() || '',
-      gpa_scale: profile.gpa_scale?.toString() || '',
-      medium_of_instruction: profile.medium_of_instruction || '',
-      english_score: profile.english_score?.toString() || '',
-      english_test_type: profile.english_test_type || '',
-      last_education_year: profile.last_education_year?.toString() || '',
-      study_level: profile.study_level || '',
-      preferred_subject: profile.preferred_subject || '',
-      preferred_intake_name: profile.preferred_intake_name || '',
-      preferred_intake_year: profile.preferred_intake_year?.toString() || '',
-      budget_min: profile.budget_min?.toString() || '',
-      budget_max: profile.budget_max?.toString() || ''
-    });
+    
+    // Only set initial data from profile if no draft was restored or if we need to hydrate missing fields
+    if (!hasRestored) {
+      setFormData({
+        name: profile.name || '',
+        phone: profile.phone || '',
+        nationality: profile.nationality || '',
+        preferred_country: profile.preferred_country || '',
+        education_level: profile.education_level || '',
+        academic_system: profile.academic_system || '',
+        gpa: profile.gpa?.toString() || '',
+        gpa_scale: profile.gpa_scale?.toString() || '',
+        medium_of_instruction: profile.medium_of_instruction || '',
+        english_score: profile.english_score?.toString() || '',
+        english_test_type: profile.english_test_type || '',
+        last_education_year: profile.last_education_year?.toString() || '',
+        study_level: profile.study_level || '',
+        preferred_subject: profile.preferred_subject || '',
+        preferred_intake_name: profile.preferred_intake_name || '',
+        preferred_intake_year: profile.preferred_intake_year?.toString() || '',
+        budget_min: profile.budget_min?.toString() || '',
+        budget_max: profile.budget_max?.toString() || ''
+      });
+    }
     setValidationErrors(profile.validation_errors || {});
-  }, [profile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, hasRestored]);
 
   const setField = (field: string, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -99,6 +107,7 @@ const Profile: React.FC = () => {
       const updated = await api.put('/api/profile', updates);
       setValidationErrors(updated.validation_errors || {});
       await refreshProfile();
+      clearDraft(); // On successful save, clear out the temporary local draft
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -148,12 +157,26 @@ const Profile: React.FC = () => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              My Profile
+              {hasRestored && !saved && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-100 text-orange-700 text-xs font-semibold uppercase tracking-wider">
+                  Unsaved Draft
+                </span>
+              )}
+            </h1>
             <p className="text-slate-600">Matching and applications unlock only when all required fields are valid.</p>
           </div>
-          <div className={`flex items-center gap-2 rounded-2xl px-4 py-3 ${profile?.profile_status === 'complete' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-            {profile?.profile_status === 'complete' ? <CheckCircle className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
-            <span className="font-semibold">{profile?.profile_completion || 0}% Complete</span>
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className={`flex items-center gap-2 rounded-2xl px-4 py-3 ${profile?.profile_status === 'complete' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              {profile?.profile_status === 'complete' ? <CheckCircle className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
+              <span className="font-semibold">{profile?.profile_completion || 0}% Complete</span>
+            </div>
+            {hasRestored && !saved && (
+              <p className="text-xs text-orange-600 font-medium bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
+                You have unsaved changes. Click save to apply.
+              </p>
+            )}
           </div>
         </div>
       </motion.div>
