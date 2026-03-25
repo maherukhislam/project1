@@ -37,7 +37,7 @@ export const api = {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error(await parseError(res));
-    return res.json();
+    return res.json().catch(() => null);
   },
 
   async put(endpoint: string, data: Record<string, any>): Promise<any> {
@@ -51,7 +51,7 @@ export const api = {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error(await parseError(res));
-    return res.json();
+    return res.json().catch(() => null);
   },
 
   async delete(endpoint: string, data: Record<string, any>): Promise<any> {
@@ -65,6 +65,6 @@ export const api = {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error(await parseError(res));
-    return res.json();
+    return res.json().catch(() => null);
   }
 };

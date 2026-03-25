@@ -173,9 +173,23 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const stored = localStorage.getItem(CMS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        // Deep merge: preserve nested arrays from stored data,
+        // but fill in any top-level keys missing from the stored version.
         return {
-          about: { ...defaultContent.about, ...parsed.about },
-          services: { ...defaultContent.services, ...parsed.services },
+          about: {
+            ...defaultContent.about,
+            ...parsed.about,
+            // Arrays must be explicitly preserved — spread would overwrite with undefined
+            values: Array.isArray(parsed.about?.values) ? parsed.about.values : defaultContent.about.values,
+            whyFeatures: Array.isArray(parsed.about?.whyFeatures) ? parsed.about.whyFeatures : defaultContent.about.whyFeatures,
+            stats: Array.isArray(parsed.about?.stats) ? parsed.about.stats : defaultContent.about.stats,
+            team: Array.isArray(parsed.about?.team) ? parsed.about.team : defaultContent.about.team,
+          },
+          services: {
+            ...defaultContent.services,
+            ...parsed.services,
+            services: Array.isArray(parsed.services?.services) ? parsed.services.services : defaultContent.services.services,
+          },
           contact: { ...defaultContent.contact, ...parsed.contact },
         };
       }

@@ -147,8 +147,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, [authBypass]);
 
+  const BYPASS_EMAIL = 'admin@studyglobal.com';
+  const BYPASS_PASSWORD = 'bypass-dev-only';
+
   const signIn = async (email: string, password: string) => {
     if (authBypass) {
+      if (email !== BYPASS_EMAIL || password !== BYPASS_PASSWORD) {
+        throw new Error('Invalid credentials (bypass mode)');
+      }
       setUser({ id: 'local-demo', email });
       setProfile({
         id: 0,

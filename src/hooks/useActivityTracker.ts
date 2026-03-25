@@ -60,11 +60,12 @@ export function useActivityTracker({ enabled, heartbeatInterval = 60000 }: UseAc
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Handle page unload
+    // Handle page unload — use sendBeacon for reliable delivery on page close.
+    // We check `enabled` (which is true only when a user is logged in) instead
+    // of reading a hard-coded localStorage key that may not match the actual
+    // Supabase v2 session key (which is project-ref-specific).
     const handleBeforeUnload = () => {
-      // Use sendBeacon for reliable delivery on page close
-      const token = localStorage.getItem('sb-auth-token');
-      if (token) {
+      if (enabled) {
         navigator.sendBeacon('/api/activity', JSON.stringify({ action: 'offline' }));
       }
     };

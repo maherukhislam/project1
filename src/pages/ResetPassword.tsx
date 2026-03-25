@@ -26,23 +26,24 @@ const ResetPassword: React.FC = () => {
       return;
     }
 
-    // Supabase fires PASSWORD_RECOVERY when the recovery link is followed
+    // Supabase fires PASSWORD_RECOVERY when the recovery link is followed.
+    // This is the ONLY event that should unlock the form — an existing normal
+    // session must NOT be treated as a recovery session.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPageState('ready');
       }
     });
 
-    // Also check if we already have a valid session from the recovery link
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setPageState('ready');
-      else if (pageState === 'waiting') {
-        // Give it a moment for the event to fire before showing invalid
-        setTimeout(() => setPageState((s) => s === 'waiting' ? 'invalid' : s), 2000);
-      }
-    });
+    // If no PASSWORD_RECOVERY event fires within 2 seconds, show invalid.
+    const timeout = setTimeout(() => {
+      setPageState((s) => s === 'waiting' ? 'invalid' : s);
+    }, 2000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
