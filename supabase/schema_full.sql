@@ -5,6 +5,7 @@
 begin;
 
 create extension if not exists pgcrypto;
+create extension if not exists pg_trgm;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -290,6 +291,19 @@ alter table public.programs
   add column if not exists updated_at timestamptz not null default now();
 
 alter table public.scholarships
+  add column if not exists funding_percentage numeric(5,2),
+  add column if not exists study_level text,
+  add column if not exists intake text default 'Any',
+  add column if not exists application_type text not null default 'manual',
+  add column if not exists additional_requirements text,
+  add column if not exists is_stackable boolean not null default false,
+  add column if not exists merit_based boolean not null default true,
+  add column if not exists need_based boolean not null default false,
+  add column if not exists is_featured boolean not null default false,
+  add column if not exists is_active boolean not null default true,
+  add column if not exists min_english_score numeric(4,1),
+  add column if not exists english_test_type text,
+  add column if not exists gpa_tolerance numeric(3,2) default 0.2,
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
 
@@ -335,27 +349,52 @@ create index if not exists idx_profiles_phone on public.profiles(phone);
 create index if not exists idx_profiles_assigned_counselor on public.profiles(assigned_counselor_id);
 create index if not exists idx_profiles_preferred_intake_year on public.profiles(preferred_intake_year);
 create index if not exists idx_profiles_needs_rematch on public.profiles(needs_rematch);
+create index if not exists idx_profiles_role_created_at_desc on public.profiles(role, created_at desc);
+create index if not exists idx_profiles_assigned_counselor_role_created_at_desc on public.profiles(assigned_counselor_id, role, created_at desc);
+create index if not exists idx_profiles_created_at_desc on public.profiles(created_at desc);
 create index if not exists idx_universities_country on public.universities(country);
+create index if not exists idx_universities_country_ranking on public.universities(country, ranking asc);
+create index if not exists idx_universities_name_trgm on public.universities using gin(name gin_trgm_ops);
 create index if not exists idx_university_stats_university_id on public.university_stats(university_id);
 create index if not exists idx_programs_university_id on public.programs(university_id);
 create index if not exists idx_programs_degree_level on public.programs(degree_level);
 create index if not exists idx_programs_application_deadline on public.programs(application_deadline);
 create index if not exists idx_programs_is_active on public.programs(is_active);
+create index if not exists idx_programs_university_degree_name on public.programs(university_id, degree_level, name);
+create index if not exists idx_programs_degree_active_deadline on public.programs(degree_level, is_active, application_deadline);
+create index if not exists idx_programs_name_trgm on public.programs using gin(name gin_trgm_ops);
+create index if not exists idx_programs_subject_area_trgm on public.programs using gin(subject_area gin_trgm_ops);
 create index if not exists idx_scholarships_university_id on public.scholarships(university_id);
+create index if not exists idx_scholarships_active_featured_deadline on public.scholarships(is_active, is_featured desc, deadline asc);
+create index if not exists idx_scholarships_active_university_deadline on public.scholarships(is_active, university_id, deadline asc);
+create index if not exists idx_scholarships_active_funding_deadline on public.scholarships(is_active, funding_type, deadline asc);
+create index if not exists idx_scholarships_active_application_type_deadline on public.scholarships(is_active, application_type, deadline asc);
 create index if not exists idx_blog_posts_slug on public.blog_posts(slug);
 create index if not exists idx_blog_posts_published on public.blog_posts(published);
+create index if not exists idx_blog_posts_published_created_at_desc on public.blog_posts(published, created_at desc);
+create index if not exists idx_blog_posts_published_category_created_at_desc on public.blog_posts(published, category, created_at desc);
 create index if not exists idx_applications_user_id on public.applications(user_id);
 create index if not exists idx_applications_program_id on public.applications(program_id);
 create index if not exists idx_applications_status on public.applications(status);
 create unique index if not exists idx_applications_unique_user_program on public.applications(user_id, program_id);
 create index if not exists idx_applications_counselor_id on public.applications(counselor_id);
+create index if not exists idx_applications_user_created_at_desc on public.applications(user_id, created_at desc);
+create index if not exists idx_applications_user_status_created_at_desc on public.applications(user_id, status, created_at desc);
+create index if not exists idx_applications_counselor_created_at_desc on public.applications(counselor_id, created_at desc);
+create index if not exists idx_applications_counselor_status_created_at_desc on public.applications(counselor_id, status, created_at desc);
+create index if not exists idx_applications_status_created_at_desc on public.applications(status, created_at desc);
 create index if not exists idx_documents_user_id on public.documents(user_id);
 create index if not exists idx_documents_status on public.documents(status);
+create index if not exists idx_documents_user_created_at_desc on public.documents(user_id, created_at desc);
+create index if not exists idx_documents_user_status_created_at_desc on public.documents(user_id, status, created_at desc);
 create index if not exists idx_audit_logs_user_id on public.audit_logs(user_id);
 create index if not exists idx_audit_logs_actor_user_id on public.audit_logs(actor_user_id);
 create index if not exists idx_audit_logs_action on public.audit_logs(action);
+create index if not exists idx_audit_logs_user_created_at_desc on public.audit_logs(user_id, created_at desc);
+create index if not exists idx_audit_logs_actor_created_at_desc on public.audit_logs(actor_user_id, created_at desc);
 create index if not exists idx_notes_student_user_id on public.notes(student_user_id);
 create index if not exists idx_notes_author_user_id on public.notes(author_user_id);
+create index if not exists idx_notes_student_created_at_desc on public.notes(student_user_id, created_at desc);
 
 drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at
