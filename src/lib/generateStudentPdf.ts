@@ -133,6 +133,8 @@ function labelStatus(status: string): string {
 /** Fetch a file for embedding. Tries admin proxy first, then direct URL. */
 async function fetchFileBytes(url: string, token: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   if (!url || url.startsWith('data:')) return null;
+  // Short-circuit dummy URLs to prevent scary console errors (400 Bad Request, ERR_NAME_NOT_RESOLVED)
+  if (url.includes('example.com')) return null;
 
   // Try proxy (works in production on Cloudflare Pages)
   try {
