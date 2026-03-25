@@ -61,6 +61,17 @@ export async function onRequest(context) {
     const ext      = safeName.includes('.') ? safeName.slice(safeName.lastIndexOf('.')) : '';
     const ts       = Date.now();
 
+    // ── Extension Validation ──────────────────────────────────────────────────
+    const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const DOC_EXTS = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp'];
+
+    if (safeKind === 'profile_picture' && !IMG_EXTS.includes(ext.toLowerCase())) {
+      return err('Unsupported image format. Use JPG, PNG, WEBP or GIF.');
+    }
+    if (safeKind === 'document' && !DOC_EXTS.includes(ext.toLowerCase())) {
+      return err('Unsupported document format. Use PDF, DOCX or images.');
+    }
+
     // Generic path — no provider-specific prefix
     const filePath =
       safeKind === 'profile_picture'

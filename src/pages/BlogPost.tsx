@@ -6,6 +6,16 @@ import GlassCard from '../components/GlassCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { api } from '../lib/api';
 
+const sanitizeHtml = (html: string) => {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '')
+    .replace(/on\w+="[^"]*"/gim, '')
+    .replace(/on\w+='[^']*'/gim, '')
+    .replace(/on\w+=\w+/gim, '')
+    .replace(/javascript:/gim, '');
+};
+
 const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<any>(null);
@@ -134,7 +144,7 @@ const BlogPost: React.FC = () => {
               {post.content ? (
                 <div
                   className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-a:text-sky-600 prose-a:no-underline hover:prose-a:underline"
-                  dangerouslySetInnerHTML={{ __html: post.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
                 />
               ) : (
                 <p className="text-slate-600 text-lg leading-relaxed">

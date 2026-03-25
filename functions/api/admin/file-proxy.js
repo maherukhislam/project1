@@ -94,15 +94,17 @@ export async function onRequest(context) {
   // ── Domain allowlist — URL must belong to our configured storage bucket ────
   // This is the primary SSRF defence: we only ever proxy our own storage URLs.
   const storageBase = env.STORAGE_BASE_URL || '';
-  if (storageBase) {
-    try {
-      const allowedHost = new URL(storageBase).hostname;
-      if (parsed.hostname !== allowedHost) {
-        return err('URL is not in the allowed storage domain');
-      }
-    } catch {
-      return err('Server storage configuration error', 500);
+  if (!storageBase) {
+    return err('Storage storage configuration error: STORAGE_BASE_URL missing', 500);
+  }
+
+  try {
+    const allowedHost = new URL(storageBase).hostname;
+    if (parsed.hostname !== allowedHost) {
+      return err('URL is not in the allowed storage domain');
     }
+  } catch {
+    return err('Invalid storage configuration', 500);
   }
 
   // ── Secondary SSRF defence — block private/reserved IPs ───────────────────
@@ -113,7 +115,11 @@ export async function onRequest(context) {
   }
 
   try {
-    const upstream = await fetch(targetUrl, { method: 'GET' });
+    const upstream = await fetch(targetUrl, { 
+      method: 'GET',
+      redirect: 'manual' // Prevent redirect-based SSRF
+    });
+
     if (!upstream.ok) {
       return err(`Upstream fetch failed: ${upstream.status}`, 502);
     }

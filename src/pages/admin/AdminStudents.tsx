@@ -446,8 +446,13 @@ const AdminStudents: React.FC = () => {
 <div className="flex items-center gap-3">
                                       <div className="relative">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-base font-semibold text-white">
-                          {student.profile_picture_url ? (
-                            <img src={student.profile_picture_url} alt={student.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                          {student.profile_picture_url && !student.profile_picture_url.includes('example.com') ? (
+                            <img 
+                              src={student.profile_picture_url} 
+                              alt={student.name || 'Student'} 
+                              className="h-full w-full rounded-full object-cover" 
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
                           ) : (
                             student.name?.charAt(0) || 'S'
                           )}
@@ -523,8 +528,13 @@ const AdminStudents: React.FC = () => {
 <div className="flex items-center gap-4">
                                     <div className="relative">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-blue-500 text-lg font-bold text-white">
-                        {selectedStudent.profile_picture_url ? (
-                          <img src={selectedStudent.profile_picture_url} alt={selectedStudent.name || 'Student'} className="h-full w-full rounded-full object-cover" />
+                        {selectedStudent.profile_picture_url && !selectedStudent.profile_picture_url.includes('example.com') ? (
+                          <img 
+                            src={selectedStudent.profile_picture_url} 
+                            alt={selectedStudent.name || 'Student'} 
+                            className="h-full w-full rounded-full object-cover" 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
                         ) : (
                           selectedStudent.name?.charAt(0) || 'S'
                         )}
@@ -665,13 +675,14 @@ const AdminStudents: React.FC = () => {
                       return (
                         <div key={doc.id} className="rounded-2xl border border-slate-700 bg-slate-900/50 overflow-hidden">
                           {/* Image thumbnail — served directly from R2 CDN URL */}
-                          {isImage && doc.file_url && (
+                          {isImage && doc.file_url && !doc.file_url.includes('example.com') && (
                             <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="block">
                               <img
                                 src={doc.file_url}
                                 alt={doc.file_name}
                                 loading="lazy"
                                 className="w-full h-36 object-cover border-b border-slate-700"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             </a>
                           )}
