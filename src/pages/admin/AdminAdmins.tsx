@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, ShieldPlus, Mail, User, Copy, CheckCircle2, Briefcase } from 'lucide-react';
+import { Shield, ShieldPlus, Mail, User, Copy, CheckCircle2, Briefcase, Clock } from 'lucide-react';
 import { api } from '../../lib/api';
+import supabase, { supabaseEnabled } from '../../lib/supabase';
 
 const AdminAdmins: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
@@ -31,6 +32,35 @@ const AdminAdmins: React.FC = () => {
 
   useEffect(() => {
     fetchAdmins();
+
+    if (!supabaseEnabled) return;
+
+    // Listen for real-time presence updates on the profiles table
+    const channel = supabase
+      .channel('admin-presence')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        (payload) => {
+          setTeamMembers((prev) =>
+            prev.map((member) => {
+              if (member.user_id === payload.new.user_id) {
+                return {
+                  ...member,
+                  is_online: payload.new.is_online,
+                  last_seen_at: payload.new.last_seen_at,
+                };
+              }
+              return member;
+            })
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   const createAdmin = async (e: React.FormEvent) => {
@@ -237,6 +267,29 @@ const AdminAdmins: React.FC = () => {
                         {member.counselor_active === false ? 'inactive' : 'active'}
                       </span>
                     )}
+                    {/* Real-time online presence status */}
+                    <div className="flex items-center gap-1.5 ml-1">
+                      <span className="relative flex h-2 w-2">
+                        {member.is_online ? (
+                          <>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </>
+                        ) : (
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
+                        )}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {member.is_online ? 'Online' : (
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {member.last_seen_at 
+                              ? new Date(member.last_seen_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : 'Offline'}
+                          </span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-slate-400 text-sm">{member.email}</p>
                   {member.role === 'counselor' && (
