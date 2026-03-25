@@ -1,16 +1,20 @@
 import { getSupabase } from './_supabase.js';
 
+const buildHeaders = (request, extras = {}) => ({
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Content-Type': 'application/json',
+  ...(request.method === 'GET'
+    ? { 'Cache-Control': 'public, max-age=120, s-maxage=900, stale-while-revalidate=3600' }
+    : {}),
+  ...extras
+});
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(request);
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
@@ -21,18 +25,43 @@ export async function onRequest(context) {
       const url = new URL(request.url);
       const country = url.searchParams.get('country');
       const search = url.searchParams.get('search');
-      const limit = url.searchParams.get('limit');
-      
-      let query = supabase.from('universities').select('*, programs(*)');
-      
+      const limit = Number.parseInt(url.searchParams.get('limit') || '', 10);
+      const degreeLevel = url.searchParams.get('degree_level');
+      const maxTuition = Number.parseInt(url.searchParams.get('max_tuition') || '', 10);
+      const scholarship = url.searchParams.get('scholarship');
+      const includePrograms = url.searchParams.get('include_programs');
+
+      const selectFields = includePrograms === 'full'
+        ? 'id, name, country, description, ranking, logo_url, tuition_min, tuition_max, acceptance_rate, programs(*)'
+        : 'id, name, country, description, ranking, logo_url, tuition_min, tuition_max, acceptance_rate, programs(id, degree_level, scholarship_available)';
+
+      let query = supabase.from('universities').select(selectFields);
+
       if (country) query = query.eq('country', country);
       if (search) query = query.ilike('name', `%${search}%`);
-      if (limit) query = query.limit(parseInt(limit));
-      
+      if (Number.isFinite(maxTuition)) query = query.lte('tuition_min', maxTuition);
+      if (Number.isFinite(limit) && limit > 0) query = query.limit(Math.min(limit, 100));
+
       const { data, error } = await query.order('ranking', { ascending: true });
       if (error) throw error;
-      
-      return new Response(JSON.stringify(data), { headers });
+
+      let filtered = data || [];
+
+      if (degreeLevel) {
+        filtered = filtered.filter((university) =>
+          Array.isArray(university.programs) &&
+          university.programs.some((program) => program?.degree_level === degreeLevel)
+        );
+      }
+
+      if (scholarship === 'true') {
+        filtered = filtered.filter((university) =>
+          Array.isArray(university.programs) &&
+          university.programs.some((program) => program?.scholarship_available)
+        );
+      }
+
+      return new Response(JSON.stringify(filtered), { headers });
     }
 
     // For POST, PUT, DELETE - check admin auth

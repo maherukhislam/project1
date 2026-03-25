@@ -1,15 +1,20 @@
 import { getSupabase } from './_supabase.js';
 
+const buildHeaders = (request, extras = {}) => ({
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Content-Type': 'application/json',
+  ...(request.method === 'GET'
+    ? { 'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400' }
+    : {}),
+  ...extras
+});
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-  
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(request);
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
@@ -17,7 +22,10 @@ export async function onRequest(context) {
 
   try {
     if (request.method === 'GET') {
-      const { data, error } = await supabase.from('countries').select('*').order('name');
+      const { data, error } = await supabase
+        .from('countries')
+        .select('id, name, flag_emoji, description, image_url, university_count')
+        .order('name');
       if (error) throw error;
       return new Response(JSON.stringify(data), { headers });
     }

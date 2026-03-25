@@ -8,7 +8,7 @@ interface UseActivityTrackerOptions {
 
 export function useActivityTracker({ enabled, heartbeatInterval = 60000 }: UseActivityTrackerOptions) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
 
   const sendHeartbeat = useCallback(async () => {
     try {
@@ -33,6 +33,8 @@ export function useActivityTracker({ enabled, heartbeatInterval = 60000 }: UseAc
 
   useEffect(() => {
     if (!enabled) return;
+
+    lastActivityRef.current = Date.now();
 
     // Send initial heartbeat on mount
     sendHeartbeat();

@@ -1,15 +1,20 @@
 import { getSupabase } from './_supabase.js';
 
+const buildHeaders = (request, extras = {}) => ({
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Content-Type': 'application/json',
+  ...(request.method === 'GET'
+    ? { 'Cache-Control': 'public, max-age=120, s-maxage=900, stale-while-revalidate=3600' }
+    : {}),
+  ...extras
+});
+
 export async function onRequest(context) {
   const { request, env } = context;
   const supabase = getSupabase(env);
-
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(request);
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
@@ -29,7 +34,9 @@ export async function onRequest(context) {
       const need_based    = url.searchParams.get('need_based');
       const include_all   = url.searchParams.get('include_all'); // admin: show inactive
 
-      let query = supabase.from('scholarships').select('*, universities(name, country)');
+      let query = supabase
+        .from('scholarships')
+        .select('id, name, university_id, funding_type, amount, funding_percentage, description, eligibility, min_gpa_required, gpa_tolerance, min_english_score, english_test_type, study_level, intake, application_type, additional_requirements, is_stackable, merit_based, need_based, is_featured, is_active, deadline, universities(name, country)');
 
       if (!include_all) query = query.eq('is_active', true);
       if (university_id) query = query.eq('university_id', parseInt(university_id));
