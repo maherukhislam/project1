@@ -65,19 +65,27 @@ export const useNotifications = () => {
 
     if (!supabaseEnabled || !user) return;
 
-    // Real-time: push new notifications instantly
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev]);
-        }
-      )
-      .subscribe();
+    let channel: any;
+    // Delay connection slightly to prevent WebSocket connecting errors on rapid remounts
+    const timer = setTimeout(() => {
+      channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            setNotifications(prev => [payload.new as Notification, ...prev]);
+          }
+        )
+        .subscribe();
+    }, 500);
 
-    return () => { void supabase.removeChannel(channel); };
+    return () => { 
+      clearTimeout(timer);
+      if (channel) {
+        void supabase.removeChannel(channel); 
+      }
+    };
   }, [fetchNotifications, user]);
 
   const unreadCount = notifications.filter(n => !n.read).length;

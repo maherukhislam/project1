@@ -36,30 +36,36 @@ const AdminAdmins: React.FC = () => {
     if (!supabaseEnabled) return;
 
     // Listen for real-time presence updates on the profiles table
-    const channel = supabase
-      .channel('admin-presence')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
-        (payload) => {
-          setTeamMembers((prev) =>
-            prev.map((member) => {
-              if (member.user_id === payload.new.user_id) {
-                return {
-                  ...member,
-                  is_online: payload.new.is_online,
-                  last_seen_at: payload.new.last_seen_at,
-                };
-              }
-              return member;
-            })
-          );
-        }
-      )
-      .subscribe();
+    let channel: any;
+    const timer = setTimeout(() => {
+      channel = supabase
+        .channel('admin-presence')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles' },
+          (payload) => {
+            setTeamMembers((prev) =>
+              prev.map((member) => {
+                if (member.user_id === payload.new.user_id) {
+                  return {
+                    ...member,
+                    is_online: payload.new.is_online,
+                    last_seen_at: payload.new.last_seen_at,
+                  };
+                }
+                return member;
+              })
+            );
+          }
+        )
+        .subscribe();
+    }, 500);
 
     return () => {
-      void supabase.removeChannel(channel);
+      clearTimeout(timer);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, []);
 
