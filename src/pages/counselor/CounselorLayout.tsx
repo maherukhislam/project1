@@ -10,7 +10,8 @@ import {
   Menu,
   Settings,
   Users,
-  X
+  X,
+  FolderOpen
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBell from '../../components/NotificationBell';
@@ -18,8 +19,9 @@ import NotificationBell from '../../components/NotificationBell';
 const NAV_ITEMS = [
   { path: '/counselor', icon: Home, label: 'Dashboard', exact: true },
   { path: '/counselor/students', icon: Users, label: 'My Students' },
-  { path: '/counselor/applications', icon: FileText, label: 'My Applications' },
-  { path: '/counselor/documents', icon: FileText, label: 'Document Review' }
+  { icon: FileText, label: 'Applications', path: '/counselor/applications' },
+  { icon: FolderOpen, label: 'Documents', path: '/counselor/documents' },
+  { icon: HelpCircle, label: 'Help & Support', path: '/counselor/support' }
 ];
 
 const ACCOUNT_ITEMS = [

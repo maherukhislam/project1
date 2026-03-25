@@ -34,6 +34,7 @@ const Profile         = lazy(() => import('./pages/dashboard/Profile'));
 const UniversityMatch = lazy(() => import('./pages/dashboard/UniversityMatch'));
 const Applications    = lazy(() => import('./pages/dashboard/Applications'));
 const Documents       = lazy(() => import('./pages/dashboard/Documents'));
+const HelpSupport     = lazy(() => import('./pages/dashboard/HelpSupport'));
 
 // Admin Pages
 const AdminLayout       = lazy(() => import('./pages/admin/AdminLayout'));
@@ -49,6 +50,7 @@ const AdminBlog         = lazy(() => import('./pages/admin/AdminBlog'));
 const AdminCMS          = lazy(() => import('./pages/admin/AdminCMS'));
 const AdminCounselors   = lazy(() => import('./pages/admin/AdminCounselors'));
 const AdminDestinations = lazy(() => import('./pages/admin/AdminDestinations'));
+const AdminSupport      = lazy(() => import('./pages/admin/AdminSupport'));
 
 // Counselor Pages
 const CounselorLayout       = lazy(() => import('./pages/counselor/CounselorLayout'));
@@ -56,6 +58,7 @@ const CounselorDashboard    = lazy(() => import('./pages/counselor/CounselorDash
 const CounselorStudents     = lazy(() => import('./pages/counselor/CounselorStudents'));
 const CounselorApplications = lazy(() => import('./pages/counselor/CounselorApplications'));
 const CounselorDocuments    = lazy(() => import('./pages/counselor/CounselorDocuments'));
+const CounselorSupport      = lazy(() => import('./pages/counselor/CounselorSupport'));
 
 
 const PageFallback = () => (
@@ -140,6 +143,7 @@ function App() {
                 <Route path="scholarships" element={<Scholarships />} />
                 <Route path="universities" element={<Universities />} />
                 <Route path="change-password" element={<ChangePassword />} />
+                <Route path="support"    element={<HelpSupport />} />
               </Route>
 
               {/* Admin Routes */}
@@ -164,6 +168,7 @@ function App() {
                 <Route path="cms"           element={<AdminCMS />} />
                 <Route path="destinations"  element={<AdminDestinations />} />
                 <Route path="change-password" element={<ChangePassword />} />
+                <Route path="support"       element={<AdminSupport />} />
               </Route>
 
               {/* Counselor Routes */}
@@ -180,6 +185,7 @@ function App() {
                 <Route path="applications"  element={<CounselorApplications />} />
                 <Route path="documents"     element={<CounselorDocuments />} />
                 <Route path="change-password" element={<ChangePassword />} />
+                <Route path="support"       element={<CounselorSupport />} />
               </Route>
 
               {/* Catch all — show 404 instead of silent redirect */}

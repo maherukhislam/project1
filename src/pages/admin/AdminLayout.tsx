@@ -2,18 +2,15 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Award,
-  BarChart3,
   BookOpen,
   ChevronsRight,
   ExternalLink,
   FileText,
-  Globe,
   GraduationCap,
   HelpCircle,
   Home,
   LogOut,
   Menu,
-  PenLine,
   Settings,
   ShieldPlus,
   Upload,
@@ -21,6 +18,7 @@ import {
   Users,
   X,
   Zap,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import NotificationBell from '../../components/NotificationBell';
@@ -32,18 +30,19 @@ const NAV_ITEMS = [
   { path: '/admin/applications', icon: FileText,     label: 'Applications' },
   { path: '/admin/documents',    icon: Upload,       label: 'Documents' },
   { path: '/admin/universities', icon: GraduationCap,label: 'Universities' },
-  { path: '/admin/destinations', icon: Globe,        label: 'Destinations' },
+  { path: '/admin/destinations', icon: MapPin,       label: 'Destinations' },
   { path: '/admin/programs',     icon: BookOpen,     label: 'Programs' },
   { path: '/admin/scholarships', icon: Award,        label: 'Scholarships' },
   { path: '/admin/admins',       icon: ShieldPlus,   label: 'Admin & Roles' },
   { path: '/admin/counselors',   icon: UserCog,      label: 'Counselors' },
-  { path: '/admin/blog',         icon: BarChart3,    label: 'Content / CMS' },
-  { path: '/admin/cms',          icon: PenLine,      label: 'Page Editor' },
+  { path: '/admin/blog',         icon: FileText,     label: 'Blog Posts' },
+  { path: '/admin/cms',          icon: Settings,     label: 'CMS Settings' },
+  { path: '/admin/support',      icon: HelpCircle,   label: 'Help & Support' },
 ];
 
 const ACCOUNT_ITEMS = [
   { icon: Settings,   label: 'Change Password', path: '/admin/change-password' },
-  { icon: HelpCircle, label: 'Help & Support',  path: null },
+  { icon: HelpCircle, label: 'Help & Support',  path: '/admin/support' },
 ];
 
 // ── Sidebar ────────────────────────────────────────────────────────────────

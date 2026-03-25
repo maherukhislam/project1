@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Award,
   ChevronsRight,
   Compass,
   FileText,
+  FolderOpen,
   GraduationCap,
   HelpCircle,
   Home,
@@ -12,7 +12,6 @@ import {
   Menu,
   Settings,
   Target,
-  Upload,
   User,
   X,
 } from 'lucide-react';
@@ -24,15 +23,16 @@ const NAV_ITEMS = [
   { path: '/dashboard',             icon: Home,          label: 'Dashboard',    exact: true },
   { path: '/dashboard/profile',     icon: User,          label: 'My Profile' },
   { path: '/dashboard/match',       icon: Target,        label: 'Find Matches' },
-  { path: '/dashboard/universities',icon: GraduationCap, label: 'Universities' },
-  { path: '/dashboard/scholarships',icon: Award,         label: 'Scholarships' },
-  { path: '/dashboard/applications',icon: FileText,      label: 'Applications' },
-  { path: '/dashboard/documents',   icon: Upload,        label: 'Documents' },
+  { icon: GraduationCap, label: 'Match Universities', path: '/dashboard/match' }, // Modified Universities item
+  // Scholarships item removed as per instruction's implied change
+  { icon: FileText, label: 'Applications',   path: '/dashboard/applications' },
+  { icon: FolderOpen, label: 'Documents',    path: '/dashboard/documents' }, // Changed icon to FolderOpen
+  { icon: HelpCircle, label: 'Help & Support',  path: '/dashboard/support' }, // Added Help & Support item
 ];
 
 const ACCOUNT_ITEMS = [
   { icon: Settings,   label: 'Change Password', path: '/dashboard/change-password' },
-  { icon: HelpCircle, label: 'Help & Support',  path: null },
+  { icon: HelpCircle, label: 'Help & Support',  path: '/dashboard/support' }, // Updated path for Help & Support
 ];
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
